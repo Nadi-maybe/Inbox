@@ -1,0 +1,399 @@
+/* ======================================================
+   CONFIGURAÇÕES BÁSICAS DA PÁGINA
+   ====================================================== */
+
+/* Configuração para TODOS os elementos da página */
+* {
+    margin: 0;                /* Remove espaço externo de todos os elementos */
+    padding: 0;               /* Remove espaço interno de todos os elementos */
+    box-sizing: border-box;   /* Faz com que padding e borda sejam incluídos no tamanho total */
+    font-family: 'Arial', sans-serif;  /* Define a fonte de texto padrão */
+}
+
+/* Configuração para a página inteira */
+html, body {
+    height: 100%;             /* Faz a página ocupar 100% da altura da tela */
+}
+
+/* Configuração para o corpo da página */
+body {
+    background-color: #f0f0f0;  /* Cor de fundo cinza claro */
+    color: #333;                /* Cor do texto - quase preto */
+    padding-bottom: 60px;       /* Espaço em baixo para a barra de navegação */
+    min-height: 100vh;          /* Garante altura mínima igual à altura da tela */
+}
+
+/* ======================================================
+   CABEÇALHO DA PÁGINA
+   ====================================================== */
+
+/* Barra azul no topo da página */
+.header {
+    background-color: #0047CC;   /* Cor de fundo azul */
+    padding: 15px;               /* Espaço interno */
+    text-align: center;          /* Centraliza o conteúdo */
+    color: white;                /* Cor do texto branco */
+    height: 80px;                /* Altura fixa */
+    display: flex;               /* Usa layout flexível */
+    align-items: center;         /* Centraliza verticalmente */
+    justify-content: center;     /* Centraliza horizontalmente */
+}
+
+/* Logo no cabeçalho */
+.logo {
+    height: 60px;              /* Altura da logo */
+    width: auto;               /* Largura automática para manter proporção */
+    margin: 0 auto;            /* Centraliza */
+}
+
+/* ======================================================
+   ÁREA AZUL DE FUNDO
+   ====================================================== */
+
+/* Área azul maior que aparece em algumas páginas */
+.blue-area {
+    background-color: #0047CC;   /* Cor de fundo azul */
+    padding: 15px;               /* Espaço interno */
+    padding-bottom: 40px;        /* Mais espaço embaixo */
+    margin-bottom: -30px;        /* Ajuste para sobreposição com cards */
+}
+
+/* ======================================================
+   CONTEÚDO PRINCIPAL
+   ====================================================== */
+
+/* Container para o conteúdo principal */
+.container {
+    padding: 0 15px;            /* Espaço nas laterais */
+    position: relative;         /* Permite posicionamento relativo */
+    display: flex;              /* Usa layout flexível */
+    flex-direction: column;     /* Organiza elementos em coluna */
+    flex: 1;                    /* Preenche espaço disponível */
+}
+
+/* ======================================================
+   MENSAGEM DE BOAS-VINDAS
+   ====================================================== */
+
+/* Área de texto de boas-vindas */
+.welcome-message {
+    color: white;               /* Texto branco */
+    padding-bottom: 10px;       /* Espaço abaixo */
+}
+
+/* Título da mensagem de boas-vindas */
+.welcome-message h2 {
+    font-size: 20px;            /* Tamanho da fonte */
+    margin-bottom: 2px;         /* Espaço abaixo do título */
+    font-weight: normal;        /* Não deixa o texto em negrito */
+}
+
+/* Texto da mensagem de boas-vindas */
+.welcome-message p {
+    font-size: 16px;            /* Tamanho da fonte */
+}
+
+/* ======================================================
+   TÍTULOS DE SEÇÕES
+   ====================================================== */
+
+/* Títulos de seções (como "Grupos", "Registros") */
+.section-title {
+    color: #0047CC;             /* Cor azul */
+    font-size: 20px;            /* Tamanho da fonte */
+    margin: 15px 5px;           /* Espaço em volta */
+    font-weight: bold;          /* Texto em negrito */
+}
+
+/* Títulos de página (como "Perfil", "Notificações") */
+.page-title {
+    color: white;
+    font-size: 26px;
+    font-weight: bold;
+    margin: 20px 0 20px 20px;
+}
+
+/* ======================================================
+   CARTÕES (CARDS) DE CONTEÚDO
+   ====================================================== */
+
+/* Cartões de conteúdo branco */
+.card {
+    background: white;           /* Fundo branco */
+    border-radius: 15px;         /* Cantos arredondados */
+    padding: 15px;               /* Espaço interno */
+    margin-bottom: 15px;         /* Espaço abaixo do card */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);  /* Sombra suave */
+    position: relative;          /* Permite posicionamento relativo */
+    z-index: 10;                 /* Define a ordem de empilhamento */
+    min-height: 140px;           /* Altura mínima do card */
+}
+
+/* Cards que sobrepõem a área azul */
+.card-overlap {
+    margin-top: -40px;           /* Puxa o card para cima (sobre a área azul) */
+}
+
+/* Título dentro dos cards */
+.card-title {
+    color: #0047CC;              /* Cor azul */
+    font-size: 20px;             /* Tamanho da fonte */
+    font-weight: bold;           /* Texto em negrito */
+    margin-bottom: 10px;         /* Espaço abaixo */
+}
+
+/* Estado vazio (quando não há conteúdo) */
+.empty-state {
+    text-align: center;          /* Centraliza o texto */
+    color: #999;                 /* Cor de texto cinza */
+    font-size: 15px;             /* Tamanho da fonte */
+    padding: 20px 10px;          /* Espaço interno */
+}
+
+/* ======================================================
+   BOTÕES
+   ====================================================== */
+
+/* Botão de adicionar (o botão '+') */
+.btn {
+    background-color: #0047CC;   /* Fundo azul */
+    color: white;                /* Texto branco */
+    border: none;                /* Sem borda */
+    border-radius: 50%;          /* Forma circular */
+    width: 40px;                 /* Largura */
+    height: 40px;                /* Altura */
+    font-size: 20px;             /* Tamanho do símbolo '+' */
+    display: flex;               /* Layout flexível */
+    align-items: center;         /* Centraliza verticalmente */
+    justify-content: center;     /* Centraliza horizontalmente */
+    cursor: pointer;             /* Mostra ponteiro do mouse ao passar por cima */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);  /* Sombra suave */
+}
+
+/* Container do botão (posiciona o botão) */
+.btn-container {
+    display: flex;               /* Layout flexível */
+    justify-content: flex-end;   /* Alinha à direita */
+    margin-top: 10px;            /* Espaço acima */
+}
+
+/* ======================================================
+   BARRA DE PESQUISA
+   ====================================================== */
+
+/* Container da barra de pesquisa */
+.search-container {
+    padding: 15px;               /* Espaço interno */
+    background-color: #0047CC;   /* Fundo azul */
+    padding-bottom: 50px;        /* Mais espaço embaixo */
+    transform: translateY(-1px); /* Ajuste fino da posição */
+}
+
+/* A barra de pesquisa em si */
+.search-bar {
+    width: 100%;                 /* Ocupa toda a largura disponível */
+    position: relative;          /* Permite posicionamento relativo */
+    background: white;           /* Fundo branco */
+    border-radius: 25px;         /* Cantos muito arredondados */
+    padding: 8px 15px;           /* Espaço interno */
+    display: flex;               /* Layout flexível */
+    align-items: center;         /* Centraliza verticalmente */
+}
+
+/* O campo de texto da barra de pesquisa */
+.search-bar input {
+    flex: 1;                     /* Preenche espaço disponível */
+    padding: 5px;                /* Espaço interno */
+    border: none;                /* Sem borda */
+    outline: none;               /* Remove contorno ao clicar */
+    font-size: 16px;             /* Tamanho da fonte */
+    color: #666;                 /* Cor do texto (cinza) */
+}
+
+/* Ícone de lupa na barra de pesquisa */
+.search-icon {
+    color: #888;                 /* Cor do ícone (cinza) */
+    font-size: 18px;             /* Tamanho do ícone */
+}
+
+/* ======================================================
+   BARRA DE NAVEGAÇÃO INFERIOR
+   ====================================================== */
+
+/* Barra de navegação fixa na parte inferior */
+.bottom-nav {
+    position: fixed;             /* Fixa na tela */
+    bottom: 0;                   /* Na parte inferior */
+    left: 0;                     /* No lado esquerdo */
+    right: 0;                    /* No lado direito (ocupa toda a largura) */
+    background-color: white;     /* Fundo branco */
+    display: flex;               /* Layout flexível */
+    justify-content: space-around; /* Espaça os ícones uniformemente */
+    padding: 10px 0;             /* Espaço interno (só em cima e embaixo) */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* Sombra sutil acima */
+    z-index: 100;                /* Garante que fique sobre outros elementos */
+}
+
+/* Ícones na barra de navegação */
+.nav-item {
+    color: #0047CC;              /* Cor azul */
+    text-align: center;          /* Centraliza o ícone */
+    font-size: 22px;             /* Tamanho do ícone */
+    padding: 5px 20px;           /* Espaço interno */
+}
+
+/* Ícone ativo (da página atual) */
+.nav-item.active {
+    background-color: #0047CC;   /* Fundo azul */
+    color: white;                /* Ícone branco */
+    border-radius: 5px;          /* Cantos levemente arredondados */
+}
+
+/* ======================================================
+   PERFIL DO USUÁRIO (Mantido da nova versão)
+   ====================================================== */
+
+/* Cabeçalho do perfil */
+.profile-header {
+    text-align: left;           /* Alinha à esquerda como na imagem */
+    margin: 15px 0;             /* Espaço em cima e embaixo */
+    display: flex;              /* Layout flexível */
+    align-items: center;        /* Centraliza verticalmente */
+    padding: 0 15px;            /* Espaço nas laterais */
+}
+
+/* Foto de perfil */
+.profile-pic {
+    width: 80px;                /* Largura ajustada */
+    height: 80px;               /* Altura ajustada */
+    border-radius: 10px;        /* Cantos arredondados como na imagem */
+    margin-right: 15px;         /* Espaço à direita */
+    background-color: #0047CC;  /* Fundo azul para ícones */
+}
+
+/* Nome do usuário no perfil */
+.profile-name {
+    font-size: 20px;             /* Tamanho da fonte */
+    font-weight: bold;           /* Texto em negrito */
+    margin-bottom: 5px;          /* Espaço embaixo */
+    display: flex;               /* Layout flexível */
+    align-items: center;         /* Centraliza verticalmente */
+}
+
+/* ID do usuário no perfil */
+.profile-id {
+    color: #ccc;                 /* Cor do texto (cinza claro) */
+    font-size: 18px;             /* Tamanho da fonte */
+    font-weight: normal;         /* Sem negrito */
+}
+
+/* Detalhes do perfil */
+.profile-details {
+    color: #666;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* Seção de grupos do usuário */
+.user-groups {
+    margin-top: 15px;            /* Espaço acima */
+    font-weight: bold;           /* Em negrito */
+}
+
+/* Grupos vazios */
+.empty-groups {
+    color: #999;
+    text-align: center;
+    padding: 15px 0;
+    font-size: 15px;
+}
+
+/* Card do histórico */
+.history-card {
+    background: white;
+    border-radius: 15px;
+    margin: 15px;
+    padding: 20px;
+}
+
+/* Título do histórico */
+.history-title {
+    color: #0047CC;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* Histórico vazio */
+.empty-history {
+    text-align: center;
+    color: #999;
+    padding: 25px 0;
+    font-size: 16px;
+}
+
+/* Cartão do perfil */
+.profile-card {
+    background: white;
+    border-radius: 15px;
+    margin: 15px;
+    padding: 20px;
+}
+
+/* Informações do perfil */
+.profile-info {
+    flex-grow: 1;
+}
+
+/* ======================================================
+   ITENS DE HISTÓRICO
+   ====================================================== */
+
+/* Itens no histórico e cards de notificação */
+.historico-item, .notificacao-card {
+    border-bottom: 1px solid #eee; /* Linha separadora */
+    padding: 10px 0;             /* Espaço em cima e embaixo */
+    margin-bottom: 10px;         /* Espaço abaixo */
+}
+
+/* Último item da lista (remove a linha de baixo) */
+.historico-item:last-child, .notificacao-card:last-child {
+    border-bottom: none;         /* Remove a linha separadora */
+    margin-bottom: 0;            /* Remove espaço abaixo */
+}
+
+/* ======================================================
+   PRODUTOS
+   ====================================================== */
+
+/* Filtros de produtos */
+.product-filters {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px 0;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.filter-btn {
+    background: white;
+    color: #0047CC;
+    padding: 10px 20px;
+    border-radius: 15px;
+    margin-right: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* Logo container na página de notificações */
+.logo-container {
+    padding: 15px 0 0 20px;
+}
+
+/* Container para página inteira com fundo cinza */
+.gray-background {
+    background-color: #f0f0f0;
+    min-height: calc(100vh - 60px);
+    margin-top: -1px;
+    padding-bottom: 20px;
+} 

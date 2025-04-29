@@ -1,0 +1,264 @@
+/* ======================================================
+   COMPONENTES ADICIONAIS
+   Estilos para componentes interativos que não afetam o layout original
+   ====================================================== */
+
+/* ======================================================
+   TOASTS (Notificações temporárias)
+   ====================================================== */
+
+.toast-container {
+    position: fixed;
+    bottom: 70px; /* Acima da barra de navegação */
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: white;
+    color: #333;
+    border-radius: 10px;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    max-width: 90%;
+    width: auto;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    pointer-events: auto;
+}
+
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.toast-success {
+    border-left: 4px solid #4CAF50;
+}
+
+.toast-error {
+    border-left: 4px solid #F44336;
+}
+
+.toast-info {
+    border-left: 4px solid #0047CC;
+}
+
+.toast-warning {
+    border-left: 4px solid #FF9800;
+}
+
+/* ======================================================
+   MODAIS
+   ====================================================== */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transform: scale(0.9);
+    transition: transform 0.3s;
+}
+
+.modal.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    color: #0047CC;
+    margin: 0;
+    font-size: 20px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.modal-footer button {
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.btn-cancel {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    color: #333;
+}
+
+.btn-confirm {
+    background-color: #0047CC;
+    border: none;
+    color: white;
+}
+
+/* ======================================================
+   VALIDAÇÃO DE FORMULÁRIOS
+   ====================================================== */
+
+.input-error {
+    border-color: #F44336 !important;
+    box-shadow: 0 0 0 1px #F44336 !important;
+}
+
+.error-message {
+    color: #F44336;
+    font-size: 13px;
+    margin-top: 5px;
+    display: block;
+}
+
+/* ======================================================
+   ESTADOS DE HOVER E FOCUS
+   ====================================================== */
+
+/* Botões */
+.btn:hover {
+    background-color: #003db0; /* Versão mais escura do azul principal */
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+/* Links */
+a:focus {
+    outline: 2px solid #0047CC;
+    outline-offset: 2px;
+}
+
+/* Campos de formulário */
+input:focus, textarea:focus {
+    border-color: #0047CC !important;
+    box-shadow: 0 0 0 2px rgba(0, 71, 204, 0.2) !important;
+    outline: none;
+}
+
+/* ======================================================
+   ANIMAÇÕES E ESTADOS DE LOADING
+   ====================================================== */
+
+/* Ícone de loading */
+.loading-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Estado de loading da página */
+body.loading {
+    overflow: hidden;
+}
+
+.page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #0047CC;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s, visibility 0.5s;
+}
+
+.page-loader img {
+    width: 150px;
+    margin-bottom: 20px;
+}
+
+.page-loader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* ======================================================
+   MENSAGENS DE FEEDBACK
+   ====================================================== */
+
+.no-results-message {
+    background-color: rgba(0, 71, 204, 0.1);
+    border-left: 4px solid #0047CC;
+    color: #333;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 5px;
+    text-align: center;
+}
+
+/* ======================================================
+   ACESSIBILIDADE
+   ====================================================== */
+
+/* Focus visível para navegação por teclado */
+:focus-visible {
+    outline: 3px solid #0047CC;
+    outline-offset: 2px;
+} 

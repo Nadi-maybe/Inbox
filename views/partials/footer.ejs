@@ -1,0 +1,96 @@
+<!-- Menu de navegação inferior -->
+<nav class="bottom-nav">
+    <a href="/" class="nav-item <%= typeof page !== 'undefined' && page === 'home' ? 'active' : '' %>">
+        <i class="fas fa-home"></i>
+    </a>
+    <a href="/produtos" class="nav-item <%= typeof page !== 'undefined' && page === 'produtos' ? 'active' : '' %>">
+        <i class="fas fa-box"></i>
+    </a>
+    <a href="/notificacoes" class="nav-item <%= typeof page !== 'undefined' && page === 'notificacoes' ? 'active' : '' %>" id="notificacoes-nav-item">
+        <i class="fas fa-bell"></i>
+    </a>
+    <a href="/perfil" class="nav-item <%= typeof page !== 'undefined' && page === 'perfil' ? 'active' : '' %>">
+        <i class="fas fa-user"></i>
+    </a>
+</nav>
+
+<!-- Importação de ícones Font Awesome -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+
+<!-- Script para animação do sino -->
+<script>
+    // Adicionar estilo para animação do sino
+    if (!document.getElementById('bell-animation-style')) {
+        const style = document.createElement('style');
+        style.id = 'bell-animation-style';
+        style.innerHTML = `
+            @keyframes shake {
+                0% { transform: rotate(0); }
+                10% { transform: rotate(10deg); }
+                20% { transform: rotate(-10deg); }
+                30% { transform: rotate(6deg); }
+                40% { transform: rotate(-6deg); }
+                50% { transform: rotate(0); }
+                100% { transform: rotate(0); }
+            }
+            
+            .shake {
+                animation: shake 2s ease-in-out infinite;
+                transform-origin: 50% 0;
+                display: inline-block;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Verificar se há notificações não lidas
+    function checkUnreadNotifications() {
+        fetch('/api/notificacoes/nao-lidas')
+            .then(response => response.json())
+            .then(data => {
+                const hasUnread = data.has_unread;
+                const navItem = document.getElementById('notificacoes-nav-item');
+                const bellIcon = navItem.querySelector('i');
+                
+                if (hasUnread) {
+                    // Adicionar classe de animação
+                    bellIcon.classList.add('shake');
+                    
+                    // Adicionar indicador de notificação
+                    if (!document.querySelector('.notification-indicator')) {
+                        navItem.style.position = 'relative';
+                        
+                        const indicator = document.createElement('span');
+                        indicator.className = 'notification-indicator';
+                        indicator.style.position = 'absolute';
+                        indicator.style.top = '8px';
+                        indicator.style.right = '8px';
+                        indicator.style.width = '8px';
+                        indicator.style.height = '8px';
+                        indicator.style.backgroundColor = '#F44336';
+                        indicator.style.borderRadius = '50%';
+                        
+                        navItem.appendChild(indicator);
+                    }
+                } else {
+                    // Remover classe de animação
+                    bellIcon.classList.remove('shake');
+                    
+                    // Remover indicador
+                    const indicator = document.querySelector('.notification-indicator');
+                    if (indicator) {
+                        indicator.remove();
+                    }
+                }
+            })
+            .catch(error => console.error('Erro ao verificar notificações:', error));
+    }
+    
+    // Verificar notificações ao carregar a página
+    document.addEventListener('DOMContentLoaded', function() {
+        checkUnreadNotifications();
+        
+        // Verificar a cada 30 segundos
+        setInterval(checkUnreadNotifications, 30000);
+    });
+</script> 

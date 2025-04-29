@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <%- include('partials/head', {title: 'Produtos'}) %>
+    <style>
+        .header {
+            margin-bottom: 0;
+        }
+        .search-container {
+            padding-top: 0;
+            height: 120px;
+        }
+        .empty-state p {
+            padding: 10px;
+            line-height: 1.4;
+            text-align: center;
+            color: #777;
+        }
+        .card-overlap {
+            margin-top: -60px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-title {
+            color: #0047CC;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .empty-state {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        .empty-icon {
+            font-size: 40px;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+        
+        /* Estilos para os grupos */
+        .group-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .group-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .group-item:hover, .group-item.active {
+            transform: translateY(-3px);
+            background-color: #f1f1f1;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+        .group-item.active {
+            border: 2px solid #0047CC;
+        }
+        .group-photo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            overflow: hidden;
+            border: 2px solid #0047CC;
+        }
+        .group-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .group-name {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+            margin: 0;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Estilos para os produtos */
+        .produtos-container {
+            margin-top: 20px;
+            display: none; /* Inicialmente oculto */
+        }
+        .produtos-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .produto-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .produto-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .produto-card h4 {
+            color: #0047CC;
+            margin: 0 0 8px 0;
+        }
+        .produto-card p {
+            margin: 0 0 8px 0;
+            color: #666;
+        }
+        .produto-card .btn-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        .reserve-btn {
+            background-color: #0047CC;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s;
+        }
+        .reserve-btn:hover {
+            background-color: #003399;
+        }
+        
+        /* Estilo para o botão de voltar */
+        .back-button {
+            background-color: transparent;
+            border: none;
+            color: #0047CC;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0;
+            margin-bottom: 10px;
+            display: none; /* Inicialmente oculto */
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+    
+    <div class="search-container">
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Pesquisar...">
+            <i class="fas fa-search search-icon"></i>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card card-overlap">
+            <div class="card-title">Meus Grupos</div>
+            
+            <% if (grupos && grupos.length > 0) { %>
+                <div class="group-grid">
+                    <% grupos.forEach(group => { %>
+                        <div class="group-item" data-id="<%= group.id %>">
+                            <div class="group-photo">
+                                <img src="<%= group.photo %>" alt="<%= group.name %>">
+                            </div>
+                            <h4 class="group-name"><%= group.name %></h4>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <p>Você não faz parte de nenhum grupo</p>
+                    <p>Para acessar produtos, você precisa participar de um grupo</p>
+                    <p>Grupos podem ser criados na página inicial ou você precisa ser convidado para um</p>
+                </div>
+            <% } %>
+        </div>
+        
+        <button class="back-button" id="back-button">
+            <i class="fas fa-arrow-left"></i> Voltar para Grupos
+        </button>
+        
+        <div class="produtos-container" id="produtos-container">
+            <div class="produtos-title">Produtos do Grupo <span id="grupo-nome"></span></div>
+            
+            <div id="produtos-list">
+                <!-- Os produtos serão carregados dinamicamente aqui -->
+            </div>
+            
+            <div class="empty-state" id="no-produtos" style="display: none;">
+                <div class="empty-icon">
+                    <i class="fas fa-box-open"></i>
+                </div>
+                <p>Nenhum produto disponível neste grupo</p>
+            </div>
+        </div>
+    </div>
+    
+    <%- include('partials/footer', {page: 'produtos'}) %>
+    
+    <script src="/js/main.js"></script>
+    <script src="/js/produtos.js"></script>
+</body>
+</html> 

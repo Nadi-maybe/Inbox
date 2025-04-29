@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <%- include('partials/head', {title: 'Login'}) %>
+    <style>
+        body {
+            background-color: #0047CC;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 0;
+        }
+
+        .login-logo {
+            width: 200px;
+            margin-bottom: 20px;
+        }
+
+        .login-container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .login-title {
+            color: #0047CC;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-group input.error {
+            border-color: #e74c3c;
+        }
+
+        .form-button {
+            background-color: #0047CC;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px;
+            font-size: 16px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 15px;
+            color: #555;
+        }
+
+        .register-link a {
+            color: #0047CC;
+            text-decoration: none;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            background-color: #fceae9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <img src="/images/Logo.png" alt="Inbox 24/7" class="login-logo">
+    
+    <div class="login-container">
+        <h2 class="login-title">Entrar no Inbox 24/7</h2>
+        
+        <% if (typeof error !== 'undefined') { %>
+            <div class="error-message">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="email">Email ou Nome de Usuário</label>
+                <input type="text" id="email" name="email" 
+                       placeholder="Digite seu email ou nome de usuário" 
+                       value="<%= typeof email !== 'undefined' ? email : '' %>"
+                       class="<%= typeof error !== 'undefined' ? 'error' : '' %>"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" 
+                       placeholder="Digite sua senha" 
+                       class="<%= typeof error !== 'undefined' ? 'error' : '' %>"
+                       required>
+            </div>
+            
+            <button type="submit" class="form-button">Entrar</button>
+        </form>
+        
+        <div class="register-link">
+            <p>Não tem uma conta? <a href="/registro">Registre-se</a></p>
+        </div>
+    </div>
+</body>
+</html> 

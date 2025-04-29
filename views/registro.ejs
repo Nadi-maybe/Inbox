@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <%- include('partials/head', {title: 'Registro'}) %>
+    <style>
+        body {
+            background-color: #0047CC;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .login-logo {
+            width: 200px;
+            margin-bottom: 20px;
+        }
+
+        .register-container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .register-title {
+            color: #0047CC;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-group input.error {
+            border-color: #e74c3c;
+        }
+
+        .form-button {
+            background-color: #0047CC;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px;
+            font-size: 16px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 15px;
+            color: #555;
+        }
+
+        .login-link a {
+            color: #0047CC;
+            text-decoration: none;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            background-color: #fceae9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .progress-container {
+            width: 90%;
+            max-width: 400px;
+            margin-bottom: 15px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            width: 33%; /* 1/3 do progresso (registro -> completar perfil -> início) */
+            background-color: white;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <img src="/images/Logo.png" alt="Inbox 24/7" class="login-logo">
+    
+    <div class="progress-container">
+        <div class="progress-bar"></div>
+    </div>
+    
+    <div class="register-container">
+        <h2 class="register-title">Criar sua conta</h2>
+        
+        <% if (typeof error !== 'undefined') { %>
+            <div class="error-message">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <form action="/registro" method="POST">
+            <div class="form-group">
+                <label for="nome">Nome completo</label>
+                <input type="text" id="nome" name="nome" 
+                       placeholder="Digite seu nome completo" 
+                       value="<%= typeof nome !== 'undefined' ? nome : '' %>"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" 
+                       placeholder="Digite seu email" 
+                       value="<%= typeof email !== 'undefined' ? email : '' %>"
+                       class="<%= typeof error !== 'undefined' && error.includes('email') ? 'error' : '' %>"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" 
+                       placeholder="Digite sua senha" 
+                       class="<%= typeof error !== 'undefined' && error.includes('senha') ? 'error' : '' %>"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmar_senha">Confirmar senha</label>
+                <input type="password" id="confirmar_senha" name="confirmar_senha" 
+                       placeholder="Confirme sua senha" 
+                       class="<%= typeof error !== 'undefined' && error.includes('senha') ? 'error' : '' %>"
+                       required>
+            </div>
+            
+            <button type="submit" class="form-button">Registrar</button>
+        </form>
+        
+        <div class="login-link">
+            <p>Já tem uma conta? <a href="/login">Entrar</a></p>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const senha = document.getElementById('senha');
+            const confirmarSenha = document.getElementById('confirmar_senha');
+            
+            // Verificar se as senhas coincidem em tempo real
+            confirmarSenha.addEventListener('input', function() {
+                if (senha.value !== confirmarSenha.value) {
+                    confirmarSenha.setCustomValidity('As senhas não coincidem');
+                } else {
+                    confirmarSenha.setCustomValidity('');
+                }
+            });
+            
+            senha.addEventListener('input', function() {
+                if (confirmarSenha.value && senha.value !== confirmarSenha.value) {
+                    confirmarSenha.setCustomValidity('As senhas não coincidem');
+                } else {
+                    confirmarSenha.setCustomValidity('');
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

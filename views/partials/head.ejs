@@ -1,0 +1,23 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inbox 24/7<%= typeof title !== 'undefined' ? ' - ' + title : '' %></title>
+<link rel="icon" href="/images/LogoMini.png" type="image/png">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/components.css">
+<!-- Importação de ícones Font Awesome via CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<!-- Script principal -->
+<script src="/js/main.js"></script>
+<!-- Scripts específicos por página -->
+<% if (typeof title !== 'undefined') { %>
+  <% if (title === 'Produtos') { %>
+    <script src="/js/produtos.js"></script>
+  <% } else if (title === 'Notificações') { %>
+    <script src="/js/notificacoes.js"></script>
+  <% } else if (title === 'Perfil') { %>
+    <script src="/js/perfil.js"></script>
+  <% } %>
+<% } else { %>
+  <!-- Script da página inicial (quando não tem título) -->
+  <script src="/js/index.js"></script>
+<% } %> 

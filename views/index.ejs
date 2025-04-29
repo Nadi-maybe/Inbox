@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .header {
+            margin-bottom: 0;
+        }
+        .welcome-message h2, .welcome-message p {
+            color: white;
+        }
+        .blue-area {
+            height: 160px;
+        }
+        .card-title {
+            color: #0047CC;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title {
+            margin-top: 20px;
+        }
+        .empty-state p {
+            padding: 5px;
+            text-align: center;
+            color: #777;
+        }
+        .card {
+            position: relative;
+            z-index: 1;
+            transform: translateY(-5px);
+            min-height: 150px;
+            padding: 15px;
+        }
+        .card.card-overlap {
+            margin-top: -60px;
+        }
+        .empty-state {
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* Estilos para os grupos */
+        .group-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .group-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .group-item:hover {
+            transform: translateY(-3px);
+        }
+        .group-photo {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            overflow: hidden;
+            border: 2px solid #0047CC;
+        }
+        .group-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .group-name {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+            margin: 0;
+            max-width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Estilos para os registros */
+        .registro-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+            position: relative;
+        }
+        .registro-item h4 {
+            font-size: 16px;
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        .registro-item p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .registro-time {
+            font-weight: bold;
+            color: #0047CC;
+        }
+        
+        /* Botão de adicionar grupo */
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #0047CC;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            text-decoration: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .empty-icon {
+            font-size: 40px;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+    
+    <div class="blue-area">
+        <div class="welcome-message">
+            <h2>Olá <%= user.name.split(' ')[0] %>,</h2>
+            <p>seja bem vindo a Inbox!!!</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card card-overlap">
+            <div class="card-title">
+                <span>Grupos</span>
+                <a href="/criar-grupo" class="btn">+</a>
+            </div>
+            
+            <% if (user.groups && user.groups.length > 0) { %>
+                <div class="group-grid">
+                    <% user.groups.forEach(group => { %>
+                        <div class="group-item" data-id="<%= group.id %>">
+                            <div class="group-photo">
+                                <img src="<%= group.photo %>" alt="<%= group.name %>">
+                            </div>
+                            <h4 class="group-name"><%= group.name %></h4>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <p>Você não faz parte de nenhum grupo</p>
+                </div>
+            <% } %>
+        </div>
+        
+        <h3 class="section-title">Registros</h3>
+        <div class="card">
+            <% if (user.registros && user.registros.length > 0) { %>
+                <% user.registros.forEach(registro => { %>
+                    <div class="registro-item" data-id="<%= registro.id %>">
+                        <h4><%= registro.nome %></h4>
+                        <p>Emprestado até: <span class="registro-time"><%= registro.data %></span></p>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <p>Nenhum registro feito</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+    
+    <%- include('partials/footer', {page: 'home'}) %>
+    
+    <script src="/js/main.js"></script>
+    <script src="/js/index.js"></script>
+</body>
+</html> 
