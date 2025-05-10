@@ -10,11 +10,13 @@
  * Multer: Middleware para processar upload de arquivos
  * FS: Módulo para operações de sistema de arquivos
  */
+const pool = require('./connectAndCreateTable');
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const fs = require('fs');
+const bcrypt = require('bcrypt');
 
 /**
  * Configuração do armazenamento para upload de arquivos de grupos
@@ -24,12 +26,12 @@ const storage = multer.diskStorage({
     // Define o diretório de destino para os uploads
     destination: function (req, file, cb) {
         const uploadPath = path.join(__dirname, 'public/images/grupos');
-        
+
         // Cria o diretório se não existir
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
         }
-        
+
         cb(null, uploadPath);
     },
     // Define o nome do arquivo com timestamp para evitar duplicatas
@@ -49,12 +51,12 @@ const storagePerfil = multer.diskStorage({
     // Define o diretório de destino para os uploads de perfil
     destination: function (req, file, cb) {
         const uploadPath = path.join(__dirname, 'public/images/perfil');
-        
+
         // Cria o diretório se não existir
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
         }
-        
+
         cb(null, uploadPath);
     },
     // Define o nome do arquivo com timestamp para evitar duplicatas
@@ -82,7 +84,7 @@ const fileFilter = (req, file, cb) => {
  * Configuração do middleware Multer para upload de arquivos de grupos
  * Define storage, filtro e limites
  */
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
@@ -94,7 +96,7 @@ const upload = multer({
  * Configuração do middleware Multer para upload de fotos de perfil
  * Define storage, filtro e limites
  */
-const uploadPerfil = multer({ 
+const uploadPerfil = multer({
     storage: storagePerfil,
     fileFilter: fileFilter,
     limits: {
@@ -199,42 +201,44 @@ app.get('/login', (req, res) => {
  * - email: Email ou nome de usuário
  * - senha: Senha do usuário
  */
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
-    
-    // Buscar usuário pelo email ou nome de usuário
-    // NOTA: Em produção, usar hash/salt para senhas e consultar banco de dados
-    const usuario = usuarios.find(u => 
-        (u.email === email || u.nome === email) && u.senha === senha
-    );
-    
-    if (usuario) {
-        // Armazenar usuário na sessão
-        // NOTA: Em produção, armazenar apenas ID e usar middleware de autenticação
+
+    try {
+        // 1. Buscar usuário no banco de dados
+        const result = await pool.query(
+            'SELECT * FROM usuarios WHERE email = $1',
+            [email]
+        );
+
+        if (result.rows.length === 0) {
+            return res.render('login', {
+                error: 'Email ou senha incorretos',
+                email: email
+            });
+        }
+
+        const usuario = result.rows[0];
+
+        // 2. Verificar senha
+        const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+        if (!senhaValida) {
+            return res.render('login', {
+                error: 'Email ou senha incorretos',
+                email: email
+            });
+        }
+
+        // 3. Armazenar usuário na sessão
         usuarioAtual = usuario;
-        
-        // Adicionar notificação de login
-        notificacoes.push({
-            id: Date.now().toString(),
-            tipo: 'info',
-            titulo: 'Login realizado',
-            mensagem: `Bem-vindo de volta, ${usuario.nome}!`,
-            lida: false,
-            data: new Date()
-        });
-        
-        // Redirecionar para a página inicial
+
         res.redirect('/');
-    } else {
-        // Mensagem de erro 
-        // NOTA: Em produção, usar flash messages para melhor UX
-        res.render('login', { 
-            error: 'Email/usuário ou senha incorretos',
-            email: email 
-        });
+    } catch (error) {
+        console.error('Erro no login:', error);
+        res.status(500).send('Erro ao fazer login');
     }
 });
-
 /**
  * Rota: GET /registro
  * Descrição: Exibe a página de registro de novo usuário
@@ -252,58 +256,25 @@ app.get('/registro', (req, res) => {
  * - senha: Senha escolhida
  * - confirmar_senha: Confirmação da senha
  */
-app.post('/registro', (req, res) => {
-    const { nome, email, senha, confirmar_senha } = req.body;
-    
-    // Verificar se as senhas coincidem
-    if (senha !== confirmar_senha) {
-        return res.render('registro', { 
-            error: 'As senhas não coincidem',
-            nome,
-            email
-        });
+app.post('/registro', async (req, res) => {
+    const { nome, email, senha } = req.body;
+
+    try {
+        // 1. Criptografar a senha
+        const saltRounds = 10;
+        const senhaCriptografada = await bcrypt.hash(senha, saltRounds);
+
+        // 2. Inserir no banco de dados
+        await pool.query(
+            'INSERT INTO usuarios (nome, email, senha) VALUES ($1, $2, $3)',
+            [nome, email, senhaCriptografada]
+        );
+
+        res.redirect('/login');
+    } catch (error) {
+        console.error('Erro ao registrar usuário:', error);
+        res.status(500).send('Erro ao registrar usuário');
     }
-    
-    // Verificar se o email já está em uso
-    if (usuarios.some(u => u.email === email)) {
-        return res.render('registro', { 
-            error: 'Este email já está em uso',
-            nome
-        });
-    }
-    
-    // Criar novo usuário
-    // NOTA: Em produção, usar hash/salt para senhas
-    const novoUsuario = {
-        id: Date.now().toString(),
-        nome,
-        email,
-        senha,
-        apelido: '',
-        telefone: '',
-        photo: '/images/default-profile.svg',
-        registroCriado: true // Flag para indicar que é um novo registro
-    };
-    
-    // Adicionar à lista de usuários
-    // NOTA: Em produção, salvar no banco de dados
-    usuarios.push(novoUsuario);
-    
-    // Armazenar usuário na sessão
-    usuarioAtual = novoUsuario;
-    
-    // Adicionar notificação de boas-vindas
-    notificacoes.push({
-        id: Date.now().toString(),
-        tipo: 'info',
-        titulo: 'Conta criada com sucesso',
-        mensagem: `Bem-vindo ao Inbox, ${nome}!`,
-        lida: false,
-        data: new Date()
-    });
-    
-    // Redirecionar para a página de completar perfil
-    res.redirect('/completar-perfil');
 });
 
 /**
@@ -316,7 +287,7 @@ app.get('/completar-perfil', (req, res) => {
     if (!usuarioAtual || !usuarioAtual.registroCriado) {
         return res.redirect('/login');
     }
-    
+
     res.render('completar-perfil');
 });
 
@@ -328,42 +299,31 @@ app.get('/completar-perfil', (req, res) => {
  * - apelido: Apelido opcional
  * - telefone: Telefone opcional
  */
-app.post('/completar-perfil', uploadPerfil.single('profile-photo'), (req, res) => {
-    // Se não há usuário logado, redirecionar para login
+app.post('/completar-perfil', uploadPerfil.single('profile-photo'), async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     try {
         const { apelido, telefone } = req.body;
-        
-        // Atualizar informações do usuário
-        usuarioAtual.apelido = apelido || '';
-        usuarioAtual.telefone = telefone || '';
-        
-        // Se uma foto foi enviada, atualizar o caminho
+        let photoPath = '/images/default-profile.svg';
+
         if (req.file) {
-            usuarioAtual.photo = `/images/perfil/${req.file.filename}`;
+            photoPath = `/images/perfil/${req.file.filename}`;
         }
-        
-        // Remover flag de registro recém-criado
-        usuarioAtual.registroCriado = false;
-        
-        // Atualizar o usuário no array de usuários
-        // NOTA: Em produção, atualizar no banco de dados
-        const index = usuarios.findIndex(u => u.id === usuarioAtual.id);
-        if (index !== -1) {
-            usuarios[index] = usuarioAtual;
-        }
-        
-        // Redirecionar para a página inicial
+
+        // Atualizar no banco de dados
+        await pool.query(
+            'UPDATE usuarios SET apelido = $1, telefone = $2, photo = $3 WHERE id = $4',
+            [apelido || '', telefone || '', photoPath, usuarioAtual.id]
+        );
+
         res.redirect('/');
     } catch (error) {
         console.error('Erro ao completar perfil:', error);
         res.status(500).send('Erro ao completar perfil');
     }
 });
-
 /**
  * Rota: GET /logout
  * Descrição: Encerra a sessão do usuário
@@ -372,7 +332,7 @@ app.get('/logout', (req, res) => {
     // Limpar usuário atual
     // NOTA: Em produção, destruir sessão adequadamente
     usuarioAtual = null;
-    
+
     // Redirecionar para login
     res.redirect('/login');
 });
@@ -391,7 +351,7 @@ app.get('/', (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     // Dados de usuário para a view
     // NOTA: Em produção, obter dados atualizados do banco
     const user = {
@@ -399,7 +359,7 @@ app.get('/', (req, res) => {
         groups: grupos,
         registros: registros
     };
-    
+
     // Renderiza a página inicial com os dados do usuário
     res.render('index', { user });
 });
@@ -414,9 +374,9 @@ app.get('/produtos', (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     // Renderiza a página de produtos
-    res.render('produtos', { 
+    res.render('produtos', {
         grupos: grupos,
         produtos: produtos
     });
@@ -432,7 +392,7 @@ app.get('/perfil', (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     // Dados do usuário para a view
     const user = {
         name: usuarioAtual.nome,
@@ -443,7 +403,7 @@ app.get('/perfil', (req, res) => {
         telefone: usuarioAtual.telefone,
         historico: []
     };
-    
+
     // Renderiza a página de perfil
     res.render('perfil', { user });
 });
@@ -458,7 +418,7 @@ app.get('/notificacoes', (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     // Renderiza a página de notificações
     res.render('notificacoes', { notificacoes });
 });
@@ -473,7 +433,7 @@ app.get('/criar-grupo', (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     // Renderiza a página de criação de grupo
     res.render('criar-grupo');
 });
@@ -486,84 +446,33 @@ app.get('/criar-grupo', (req, res) => {
  * - descricao: Descrição do grupo
  * - groupPhoto: Foto do grupo (arquivo)
  */
-app.post('/criar-grupo', upload.single('groupPhoto'), (req, res) => {
-    // Se não há usuário logado, redirecionar para login
+app.post('/criar-grupo', upload.single('groupPhoto'), async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     try {
         const { nome, descricao } = req.body;
-        
-        // Caminho da foto (padrão se não enviada)
         let photoPath = '/images/default-profile.svg';
-        
-        // Se tiver enviado uma foto, usar o caminho dela
+
         if (req.file) {
             photoPath = `/images/grupos/${req.file.filename}`;
         }
-        
-        // Criar novo grupo
-        // NOTA: Em produção, salvar no banco de dados
-        const novoGrupo = {
-            id: Date.now().toString(),
-            name: nome,
-            description: descricao || '',
-            photo: photoPath,
-            createdAt: new Date(),
-            createdBy: usuarioAtual.id
-        };
-        
-        // Adicionar à lista de grupos
-        grupos.push(novoGrupo);
-        
-        // Adicionar alguns produtos de exemplo para este grupo
-        // NOTA: Em produção, remover ou mover para uma rota separada
-        const produtosExemplo = [
-            {
-                id: `prod-${Date.now()}-1`,
-                nome: 'Notebook Dell',
-                descricao: 'Notebook para uso profissional',
-                groupId: novoGrupo.id,
-                createdAt: new Date()
-            },
-            {
-                id: `prod-${Date.now()}-2`,
-                nome: 'Impressora HP',
-                descricao: 'Impressora multifuncional',
-                groupId: novoGrupo.id,
-                createdAt: new Date()
-            },
-            {
-                id: `prod-${Date.now()}-3`,
-                nome: 'Projetor Epson',
-                descricao: 'Projetor para apresentações',
-                groupId: novoGrupo.id,
-                createdAt: new Date()
-            }
-        ];
-        
-        // Adicionar produtos de exemplo
-        produtos.push(...produtosExemplo);
-        
-        // Adicionar notificação de criação de grupo
-        notificacoes.push({
-            id: Date.now().toString(),
-            tipo: 'grupo',
-            titulo: 'Novo Grupo Criado',
-            mensagem: `Você criou o grupo "${nome}" com sucesso!`,
-            lida: false,
-            data: new Date()
-        });
-        
-        // Redirecionar para a página inicial
+
+        // Inserir grupo no banco de dados
+        const result = await pool.query(
+            'INSERT INTO grupos (nome, descricao, photo, criado_por) VALUES ($1, $2, $3, $4) RETURNING *',
+            [nome, descricao || '', photoPath, usuarioAtual.id]
+        );
+
+        const novoGrupo = result.rows[0];
+
         res.redirect('/');
     } catch (error) {
         console.error('Erro ao criar grupo:', error);
         res.status(500).send('Erro ao criar grupo');
     }
 });
-
 // =========================================================
 // API ENDPOINTS
 // =========================================================
@@ -576,10 +485,10 @@ app.post('/criar-grupo', upload.single('groupPhoto'), (req, res) => {
  */
 app.get('/api/produtos/grupo/:id', (req, res) => {
     const grupoId = req.params.id;
-    
+
     // Filtrando produtos pelo ID do grupo
     const produtosDoGrupo = produtos.filter(produto => produto.groupId === grupoId);
-    
+
     res.json(produtosDoGrupo);
 });
 
@@ -593,11 +502,11 @@ app.get('/api/produtos/grupo/:id', (req, res) => {
  */
 app.post('/api/produtos', (req, res) => {
     const { nome, descricao, groupId } = req.body;
-    
+
     if (!nome || !groupId) {
         return res.status(400).json({ erro: 'Nome e grupo são obrigatórios' });
     }
-    
+
     // Criar novo produto
     // NOTA: Em produção, salvar no banco de dados
     const novoProduto = {
@@ -607,9 +516,9 @@ app.post('/api/produtos', (req, res) => {
         groupId,
         createdAt: new Date()
     };
-    
+
     produtos.push(novoProduto);
-    
+
     res.status(201).json(novoProduto);
 });
 
@@ -622,7 +531,7 @@ app.post('/api/produtos', (req, res) => {
 app.post('/api/notificacoes/:id/lida', (req, res) => {
     const notificacaoId = req.params.id;
     const notificacao = notificacoes.find(n => n.id === notificacaoId);
-    
+
     if (notificacao) {
         notificacao.lida = true;
         res.json({ sucesso: true });
@@ -640,7 +549,7 @@ app.post('/api/notificacoes/:id/lida', (req, res) => {
 app.delete('/api/notificacoes/:id', (req, res) => {
     const notificacaoId = req.params.id;
     const index = notificacoes.findIndex(n => n.id === notificacaoId);
-    
+
     if (index !== -1) {
         notificacoes.splice(index, 1);
         res.json({ sucesso: true });
@@ -664,7 +573,7 @@ app.delete('/api/notificacoes', (req, res) => {
  */
 app.get('/api/notificacoes/nao-lidas', (req, res) => {
     const naoLidas = notificacoes.filter(n => !n.lida);
-    res.json({ 
+    res.json({
         count: naoLidas.length,
         has_unread: naoLidas.length > 0
     });
@@ -680,14 +589,14 @@ app.get('/api/notificacoes/nao-lidas', (req, res) => {
  */
 app.post('/api/convites/grupo', (req, res) => {
     const { grupoId, grupoNome, remetente } = req.body;
-    
+
     if (!grupoId || !grupoNome) {
         return res.status(400).json({ erro: 'Dados do grupo são obrigatórios' });
     }
-    
+
     // Obter nome do remetente
     const nomeRemetente = usuarioAtual ? usuarioAtual.nome : (remetente || 'um usuário');
-    
+
     // Criar notificação de convite
     const convite = {
         id: Date.now().toString(),
@@ -699,9 +608,9 @@ app.post('/api/convites/grupo', (req, res) => {
         lida: false,
         data: new Date()
     };
-    
+
     notificacoes.push(convite);
-    
+
     res.status(201).json(convite);
 });
 
@@ -714,23 +623,23 @@ app.post('/api/convites/grupo', (req, res) => {
 app.post('/api/convites/:id/aceitar', (req, res) => {
     const conviteId = req.params.id;
     const convite = notificacoes.find(n => n.id === conviteId && n.tipo === 'convite');
-    
+
     if (!convite) {
         return res.status(404).json({ erro: 'Convite não encontrado' });
     }
-    
+
     // Procurar o grupo
     const grupo = grupos.find(g => g.id === convite.grupoId);
-    
+
     if (!grupo) {
         return res.status(404).json({ erro: 'Grupo não encontrado' });
     }
-    
+
     // Marcar notificação como lida
     convite.lida = true;
-    
+
     // NOTA: Em produção, adicionar usuário ao grupo no banco de dados
-    
+
     // Criar notificação de confirmação
     const confirmacao = {
         id: Date.now().toString(),
@@ -740,10 +649,10 @@ app.post('/api/convites/:id/aceitar', (req, res) => {
         lida: false,
         data: new Date()
     };
-    
+
     notificacoes.push(confirmacao);
-    
-    res.json({ 
+
+    res.json({
         sucesso: true,
         message: 'Convite aceito com sucesso'
     });
@@ -759,10 +668,10 @@ app.get('/api/demo/adicionar-convite', (req, res) => {
     if (grupos.length === 0) {
         return res.status(400).json({ erro: 'Não há grupos disponíveis para enviar convites' });
     }
-    
+
     // Selecionar um grupo aleatório
     const grupo = grupos[Math.floor(Math.random() * grupos.length)];
-    
+
     // Criar notificação de convite
     const convite = {
         id: Date.now().toString(),
@@ -774,10 +683,10 @@ app.get('/api/demo/adicionar-convite', (req, res) => {
         lida: false,
         data: new Date()
     };
-    
+
     notificacoes.push(convite);
-    
-    res.json({ 
+
+    res.json({
         sucesso: true,
         message: 'Convite de demonstração criado com sucesso',
         convite
