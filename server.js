@@ -15,6 +15,8 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const fs = require('fs');
+// Adicionando conexão com PostgreSQL
+const db = require('./db');
 
 /**
  * Configuração do armazenamento para upload de arquivos de grupos
@@ -199,38 +201,39 @@ app.get('/login', (req, res) => {
  * - email: Email ou nome de usuário
  * - senha: Senha do usuário
  */
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
-    
-    // Buscar usuário pelo email ou nome de usuário
-    // NOTA: Em produção, usar hash/salt para senhas e consultar banco de dados
-    const usuario = usuarios.find(u => 
-        (u.email === email || u.nome === email) && u.senha === senha
-    );
-    
-    if (usuario) {
-        // Armazenar usuário na sessão
-        // NOTA: Em produção, armazenar apenas ID e usar middleware de autenticação
-        usuarioAtual = usuario;
-        
-        // Adicionar notificação de login
-        notificacoes.push({
-            id: Date.now().toString(),
-            tipo: 'info',
-            titulo: 'Login realizado',
-            mensagem: `Bem-vindo de volta, ${usuario.nome}!`,
-            lida: false,
-            data: new Date()
-        });
-        
-        // Redirecionar para a página inicial
-        res.redirect('/');
-    } else {
-        // Mensagem de erro 
-        // NOTA: Em produção, usar flash messages para melhor UX
-        res.render('login', { 
-            error: 'Email/usuário ou senha incorretos',
-            email: email 
+
+    try {
+        // Buscar usuário pelo email ou nome de usuário no banco
+        const result = await db.query(
+            'SELECT * FROM usuario WHERE (email = $1 OR nome = $1) AND senha = $2',
+            [email, senha]
+        );
+        const usuario = result.rows[0];
+
+        if (usuario) {
+            usuarioAtual = usuario;
+            notificacoes.push({
+                id: Date.now().toString(),
+                tipo: 'info',
+                titulo: 'Login realizado',
+                mensagem: `Bem-vindo de volta, ${usuario.nome}!`,
+                lida: false,
+                data: new Date()
+            });
+            res.redirect('/');
+        } else {
+            res.render('login', {
+                error: 'Email/usuário ou senha incorretos',
+                email: email
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao fazer login:', error);
+        res.render('login', {
+            error: 'Erro ao fazer login',
+            email: email
         });
     }
 });
@@ -252,58 +255,55 @@ app.get('/registro', (req, res) => {
  * - senha: Senha escolhida
  * - confirmar_senha: Confirmação da senha
  */
-app.post('/registro', (req, res) => {
+app.post('/registro', async (req, res) => {
     const { nome, email, senha, confirmar_senha } = req.body;
-    
-    // Verificar se as senhas coincidem
+
     if (senha !== confirmar_senha) {
-        return res.render('registro', { 
+        return res.render('registro', {
             error: 'As senhas não coincidem',
             nome,
             email
         });
     }
-    
-    // Verificar se o email já está em uso
-    if (usuarios.some(u => u.email === email)) {
-        return res.render('registro', { 
-            error: 'Este email já está em uso',
-            nome
+
+    try {
+        // Verificar se o email já está em uso no banco
+        const emailCheck = await db.query('SELECT id FROM usuario WHERE email = $1', [email]);
+        if (emailCheck.rows.length > 0) {
+            return res.render('registro', {
+                error: 'Este email já está em uso',
+                nome
+            });
+        }
+
+        // Inserir novo usuário (incluindo created_at e updated_at)
+        const result = await db.query(
+            'INSERT INTO usuario (nome, email, senha, apelido, telefone, photo, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *',
+            [nome, email, senha, '', '', '/images/default-profile.svg']
+        );
+        const novoUsuario = result.rows[0];
+        novoUsuario.registroCriado = true;
+
+        usuarioAtual = novoUsuario;
+
+        notificacoes.push({
+            id: Date.now().toString(),
+            tipo: 'info',
+            titulo: 'Conta criada com sucesso',
+            mensagem: `Bem-vindo ao Inbox, ${nome}!`,
+            lida: false,
+            data: new Date()
+        });
+
+        res.redirect('/completar-perfil');
+    } catch (error) {
+        console.error('Erro ao registrar usuário (detalhe):', error);
+        res.render('registro', {
+            error: 'Erro ao registrar usuário',
+            nome,
+            email
         });
     }
-    
-    // Criar novo usuário
-    // NOTA: Em produção, usar hash/salt para senhas
-    const novoUsuario = {
-        id: Date.now().toString(),
-        nome,
-        email,
-        senha,
-        apelido: '',
-        telefone: '',
-        photo: '/images/default-profile.svg',
-        registroCriado: true // Flag para indicar que é um novo registro
-    };
-    
-    // Adicionar à lista de usuários
-    // NOTA: Em produção, salvar no banco de dados
-    usuarios.push(novoUsuario);
-    
-    // Armazenar usuário na sessão
-    usuarioAtual = novoUsuario;
-    
-    // Adicionar notificação de boas-vindas
-    notificacoes.push({
-        id: Date.now().toString(),
-        tipo: 'info',
-        titulo: 'Conta criada com sucesso',
-        mensagem: `Bem-vindo ao Inbox, ${nome}!`,
-        lida: false,
-        data: new Date()
-    });
-    
-    // Redirecionar para a página de completar perfil
-    res.redirect('/completar-perfil');
 });
 
 /**
@@ -386,22 +386,24 @@ app.get('/logout', (req, res) => {
  * Descrição: Página inicial da aplicação
  * Acesso: Apenas usuários autenticados
  */
-app.get('/', (req, res) => {
-    // Se não há usuário logado, redirecionar para login
+app.get('/', async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
-    // Dados de usuário para a view
-    // NOTA: Em produção, obter dados atualizados do banco
-    const user = {
-        name: usuarioAtual.nome,
-        groups: grupos,
-        registros: registros
-    };
-    
-    // Renderiza a página inicial com os dados do usuário
-    res.render('index', { user });
+
+    try {
+        // Buscar grupos do usuário logado no banco (tabela e campo corretos)
+        const gruposResult = await db.query('SELECT * FROM grupo WHERE criador_id = $1', [usuarioAtual.id]);
+        const user = {
+            name: usuarioAtual.nome,
+            groups: gruposResult.rows,
+            registros: registros // ainda em memória
+        };
+        res.render('index', { user });
+    } catch (error) {
+        console.error('Erro ao buscar grupos:', error);
+        res.status(500).send('Erro ao carregar grupos');
+    }
 });
 
 /**
@@ -486,67 +488,24 @@ app.get('/criar-grupo', (req, res) => {
  * - descricao: Descrição do grupo
  * - groupPhoto: Foto do grupo (arquivo)
  */
-app.post('/criar-grupo', upload.single('groupPhoto'), (req, res) => {
-    // Se não há usuário logado, redirecionar para login
+app.post('/criar-grupo', upload.single('groupPhoto'), async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
+
     try {
         const { nome, descricao } = req.body;
-        
-        // Caminho da foto (padrão se não enviada)
         let photoPath = '/images/default-profile.svg';
-        
-        // Se tiver enviado uma foto, usar o caminho dela
         if (req.file) {
             photoPath = `/images/grupos/${req.file.filename}`;
         }
-        
-        // Criar novo grupo
-        // NOTA: Em produção, salvar no banco de dados
-        const novoGrupo = {
-            id: Date.now().toString(),
-            name: nome,
-            description: descricao || '',
-            photo: photoPath,
-            createdAt: new Date(),
-            createdBy: usuarioAtual.id
-        };
-        
-        // Adicionar à lista de grupos
-        grupos.push(novoGrupo);
-        
-        // Adicionar alguns produtos de exemplo para este grupo
-        // NOTA: Em produção, remover ou mover para uma rota separada
-        const produtosExemplo = [
-            {
-                id: `prod-${Date.now()}-1`,
-                nome: 'Notebook Dell',
-                descricao: 'Notebook para uso profissional',
-                groupId: novoGrupo.id,
-                createdAt: new Date()
-            },
-            {
-                id: `prod-${Date.now()}-2`,
-                nome: 'Impressora HP',
-                descricao: 'Impressora multifuncional',
-                groupId: novoGrupo.id,
-                createdAt: new Date()
-            },
-            {
-                id: `prod-${Date.now()}-3`,
-                nome: 'Projetor Epson',
-                descricao: 'Projetor para apresentações',
-                groupId: novoGrupo.id,
-                createdAt: new Date()
-            }
-        ];
-        
-        // Adicionar produtos de exemplo
-        produtos.push(...produtosExemplo);
-        
-        // Adicionar notificação de criação de grupo
+
+        // Inserir novo grupo no banco com os campos corretos
+        await db.query(
+            'INSERT INTO grupo (nome, descricao, imagem, criador_id) VALUES ($1, $2, $3, $4)',
+            [nome, descricao || '', photoPath, usuarioAtual.id]
+        );
+
         notificacoes.push({
             id: Date.now().toString(),
             tipo: 'grupo',
@@ -555,8 +514,7 @@ app.post('/criar-grupo', upload.single('groupPhoto'), (req, res) => {
             lida: false,
             data: new Date()
         });
-        
-        // Redirecionar para a página inicial
+
         res.redirect('/');
     } catch (error) {
         console.error('Erro ao criar grupo:', error);

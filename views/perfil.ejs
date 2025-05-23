@@ -113,7 +113,7 @@
             </div>
             <div class="profile-info">
                 <div class="profile-name">
-                    <%= user.name %> <span class="profile-id">#<%= user.id.substring(0, 4) %></span>
+                    <%= user.name %> <span class="profile-id">#<%= String(user.id).substring(0, 4) %></span>
                 </div>
                 <div class="profile-details"><%= user.apelido || 'Sem apelido' %></div>
                 <div class="profile-details"><%= user.email || 'Sem email' %></div>
