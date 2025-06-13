@@ -182,6 +182,28 @@ notificacoes.push({
  */
 let usuarioAtual = null;
 
+// Grupos de exemplo para teste
+grupos.push({
+    id: '1',
+    name: 'Casa',
+    photo: '/images/default-group.svg',
+    createdAt: new Date()
+});
+
+grupos.push({
+    id: '2',
+    name: 'Trabalho',
+    photo: '/images/default-group.svg',
+    createdAt: new Date()
+});
+
+grupos.push({
+    id: '3',
+    name: 'Faculdade',
+    photo: '/images/default-group.svg',
+    createdAt: new Date()
+});
+
 // =========================================================
 // ROTAS DE AUTENTICAÇÃO
 // =========================================================
@@ -203,38 +225,22 @@ app.get('/login', (req, res) => {
  */
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
-
+    
     try {
-        // Buscar usuário pelo email ou nome de usuário no banco
-        const result = await db.query(
-            'SELECT * FROM usuario WHERE (email = $1 OR nome = $1) AND senha = $2',
-            [email, senha]
-        );
-        const usuario = result.rows[0];
-
-        if (usuario) {
-            usuarioAtual = usuario;
-            notificacoes.push({
-                id: Date.now().toString(),
-                tipo: 'info',
-                titulo: 'Login realizado',
-                mensagem: `Bem-vindo de volta, ${usuario.nome}!`,
-                lida: false,
-                data: new Date()
-            });
+        // Buscar usuário no banco
+        const result = await db.query('SELECT * FROM usuario WHERE email = $1 AND senha = $2', [email, senha]);
+        
+        if (result.rows.length > 0) {
+            usuarioAtual = result.rows[0];
+            // Atualizar último login
+            await db.query('UPDATE usuario SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1', [usuarioAtual.id]);
             res.redirect('/');
         } else {
-            res.render('login', {
-                error: 'Email/usuário ou senha incorretos',
-                email: email
-            });
+            res.render('login', { erro: 'Email ou senha inválidos' });
         }
     } catch (error) {
-        console.error('Erro ao fazer login:', error);
-        res.render('login', {
-            error: 'Erro ao fazer login',
-            email: email
-        });
+        console.error('Erro no login:', error);
+        res.render('login', { erro: 'Erro ao fazer login' });
     }
 });
 
@@ -276,9 +282,9 @@ app.post('/registro', async (req, res) => {
             });
         }
 
-        // Inserir novo usuário (incluindo created_at e updated_at)
+        // Inserir novo usuário (usando nomes corretos dos campos)
         const result = await db.query(
-            'INSERT INTO usuario (nome, email, senha, apelido, telefone, photo, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *',
+            'INSERT INTO usuario (nome, email, senha, apelido, telefone, foto, data_criacao) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) RETURNING *',
             [nome, email, senha, '', '', '/images/default-profile.svg']
         );
         const novoUsuario = result.rows[0];
@@ -392,17 +398,30 @@ app.get('/', async (req, res) => {
     }
 
     try {
-        // Buscar grupos do usuário logado no banco (tabela e campo corretos)
-        const gruposResult = await db.query('SELECT * FROM grupo WHERE criador_id = $1', [usuarioAtual.id]);
+        // Buscar grupos do usuário (tanto os que ele criou quanto os que participa)
+        const gruposResult = await db.query(`
+            SELECT g.* FROM grupo g
+            LEFT JOIN membro_grupo mg ON g.id = mg.grupo_id
+            WHERE g.criador_id = $1 OR mg.usuario_id = $1
+        `, [usuarioAtual.id]);
+
+        // Buscar notificações não lidas
+        const notificacoesResult = await db.query(`
+            SELECT * FROM notificacao 
+            WHERE usuario_id = $1 AND lida = false
+            ORDER BY data_criacao DESC
+        `, [usuarioAtual.id]);
+
         const user = {
             name: usuarioAtual.nome,
             groups: gruposResult.rows,
-            registros: registros // ainda em memória
+            notificacoes: notificacoesResult.rows
         };
+        
         res.render('index', { user });
     } catch (error) {
-        console.error('Erro ao buscar grupos:', error);
-        res.status(500).send('Erro ao carregar grupos');
+        console.error('Erro ao carregar página inicial:', error);
+        res.status(500).send('Erro ao carregar página inicial');
     }
 });
 
@@ -495,30 +514,60 @@ app.post('/criar-grupo', upload.single('groupPhoto'), async (req, res) => {
 
     try {
         const { nome, descricao } = req.body;
-        let photoPath = '/images/default-profile.svg';
+        let photoPath = '/images/default-group.svg';
+        
         if (req.file) {
             photoPath = `/images/grupos/${req.file.filename}`;
         }
 
-        // Inserir novo grupo no banco com os campos corretos
-        await db.query(
-            'INSERT INTO grupo (nome, descricao, imagem, criador_id) VALUES ($1, $2, $3, $4)',
+        // Inserir novo grupo
+        const grupoResult = await db.query(
+            'INSERT INTO grupo (nome, descricao, imagem, criador_id) VALUES ($1, $2, $3, $4) RETURNING id',
             [nome, descricao || '', photoPath, usuarioAtual.id]
         );
 
-        notificacoes.push({
-            id: Date.now().toString(),
-            tipo: 'grupo',
-            titulo: 'Novo Grupo Criado',
-            mensagem: `Você criou o grupo "${nome}" com sucesso!`,
-            lida: false,
-            data: new Date()
-        });
+        // Adicionar criador como membro do grupo
+        await db.query(
+            'INSERT INTO membro_grupo (usuario_id, grupo_id) VALUES ($1, $2)',
+            [usuarioAtual.id, grupoResult.rows[0].id]
+        );
 
-        res.redirect('/');
+        // Criar notificação
+        await db.query(
+            'INSERT INTO notificacao (usuario_id, tipo, titulo, mensagem) VALUES ($1, $2, $3, $4)',
+            [usuarioAtual.id, 'grupo', 'Novo Grupo Criado', `Você criou o grupo "${nome}"`]
+        );
+
+        res.redirect('/grupos');
     } catch (error) {
         console.error('Erro ao criar grupo:', error);
         res.status(500).send('Erro ao criar grupo');
+    }
+});
+
+/**
+ * Rota: GET /grupos
+ * Descrição: Página de grupos disponíveis
+ */
+app.get('/grupos', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.redirect('/login');
+    }
+
+    try {
+        // Buscar grupos do usuário
+        const gruposResult = await db.query(`
+            SELECT g.* FROM grupo g
+            LEFT JOIN membro_grupo mg ON g.id = mg.grupo_id
+            WHERE g.criador_id = $1 OR mg.usuario_id = $1
+        `, [usuarioAtual.id]);
+
+        res.render('grupos', {
+            grupos: gruposResult.rows
+        });
+    } catch (error) {
+        console.error('Erro ao buscar grupos:', error);
+        res.status(500).send('Erro ao buscar grupos');
     }
 });
 
@@ -532,13 +581,35 @@ app.post('/criar-grupo', upload.single('groupPhoto'), async (req, res) => {
  * Parâmetros:
  * - id: ID do grupo (URL params)
  */
-app.get('/api/produtos/grupo/:id', (req, res) => {
-    const grupoId = req.params.id;
-    
-    // Filtrando produtos pelo ID do grupo
-    const produtosDoGrupo = produtos.filter(produto => produto.groupId === grupoId);
-    
-    res.json(produtosDoGrupo);
+app.get('/api/produtos/grupo/:id', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.status(401).json({ erro: 'Não autorizado' });
+    }
+
+    try {
+        const grupoId = req.params.id;
+
+        // Verificar se o usuário é membro do grupo
+        const membroResult = await db.query(`
+            SELECT 1 FROM membro_grupo 
+            WHERE usuario_id = $1 AND grupo_id = $2
+        `, [usuarioAtual.id, grupoId]);
+
+        if (membroResult.rows.length === 0) {
+            return res.status(403).json({ erro: 'Você não é membro deste grupo' });
+        }
+
+        // Buscar produtos do grupo
+        const produtosResult = await db.query(
+            'SELECT * FROM produto WHERE grupo_id = $1',
+            [grupoId]
+        );
+
+        res.json(produtosResult.rows);
+    } catch (error) {
+        console.error('Erro ao buscar produtos:', error);
+        res.status(500).json({ erro: 'Erro ao buscar produtos' });
+    }
 });
 
 /**
@@ -549,26 +620,39 @@ app.get('/api/produtos/grupo/:id', (req, res) => {
  * - descricao: Descrição do produto
  * - groupId: ID do grupo ao qual o produto pertence
  */
-app.post('/api/produtos', (req, res) => {
-    const { nome, descricao, groupId } = req.body;
-    
-    if (!nome || !groupId) {
-        return res.status(400).json({ erro: 'Nome e grupo são obrigatórios' });
+app.post('/api/produtos', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.status(401).json({ erro: 'Não autorizado' });
     }
-    
-    // Criar novo produto
-    // NOTA: Em produção, salvar no banco de dados
-    const novoProduto = {
-        id: Date.now().toString(),
-        nome,
-        descricao: descricao || '',
-        groupId,
-        createdAt: new Date()
-    };
-    
-    produtos.push(novoProduto);
-    
-    res.status(201).json(novoProduto);
+
+    try {
+        const { nome, descricao, groupId } = req.body;
+        
+        if (!nome || !groupId) {
+            return res.status(400).json({ erro: 'Nome e grupo são obrigatórios' });
+        }
+
+        // Verificar se o usuário é membro do grupo
+        const membroResult = await db.query(`
+            SELECT 1 FROM membro_grupo 
+            WHERE usuario_id = $1 AND grupo_id = $2
+        `, [usuarioAtual.id, groupId]);
+
+        if (membroResult.rows.length === 0) {
+            return res.status(403).json({ erro: 'Você não é membro deste grupo' });
+        }
+
+        // Inserir produto
+        const produtoResult = await db.query(
+            'INSERT INTO produto (nome, descricao, grupo_id, criador_id) VALUES ($1, $2, $3, $4) RETURNING *',
+            [nome, descricao || '', groupId, usuarioAtual.id]
+        );
+
+        res.status(201).json(produtoResult.rows[0]);
+    } catch (error) {
+        console.error('Erro ao adicionar produto:', error);
+        res.status(500).json({ erro: 'Erro ao adicionar produto' });
+    }
 });
 
 /**
@@ -577,15 +661,21 @@ app.post('/api/produtos', (req, res) => {
  * Parâmetros:
  * - id: ID da notificação (URL params)
  */
-app.post('/api/notificacoes/:id/lida', (req, res) => {
-    const notificacaoId = req.params.id;
-    const notificacao = notificacoes.find(n => n.id === notificacaoId);
-    
-    if (notificacao) {
-        notificacao.lida = true;
+app.post('/api/notificacoes/:id/lida', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.status(401).json({ erro: 'Não autorizado' });
+    }
+
+    try {
+        await db.query(
+            'UPDATE notificacao SET lida = true WHERE id = $1 AND usuario_id = $2',
+            [req.params.id, usuarioAtual.id]
+        );
+
         res.json({ sucesso: true });
-    } else {
-        res.status(404).json({ erro: 'Notificação não encontrada' });
+    } catch (error) {
+        console.error('Erro ao marcar notificação como lida:', error);
+        res.status(500).json({ erro: 'Erro ao marcar notificação como lida' });
     }
 });
 
