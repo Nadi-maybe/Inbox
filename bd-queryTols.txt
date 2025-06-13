@@ -1,0 +1,168 @@
+-- Tabelas principais do sistema Inbox
+
+-- Tabela de usuários
+CREATE TABLE usuario (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    apelido VARCHAR(50),
+    telefone VARCHAR(20),
+    foto VARCHAR(255) DEFAULT '/images/default-profile.svg',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ultimo_login TIMESTAMP
+);
+
+-- Tabela de grupos
+CREATE TABLE grupo (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT,
+    imagem VARCHAR(255) DEFAULT '/images/default-group.svg',
+    criador_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de membros do grupo
+CREATE TABLE membro_grupo (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+    grupo_id INTEGER REFERENCES grupo(id) ON DELETE CASCADE,
+    data_entrada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(usuario_id, grupo_id)
+);
+
+-- Tabela de produtos
+CREATE TABLE produto (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT,
+    grupo_id INTEGER REFERENCES grupo(id) ON DELETE CASCADE,
+    criador_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+    imagem VARCHAR(255) DEFAULT '/images/default-product.svg',
+    status VARCHAR(20) DEFAULT 'disponivel',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de reservas
+CREATE TABLE reserva (
+    id SERIAL PRIMARY KEY,
+    produto_id INTEGER REFERENCES produto(id) ON DELETE CASCADE,
+    usuario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+    data_inicio TIMESTAMP NOT NULL,
+    data_fim TIMESTAMP NOT NULL,
+    status VARCHAR(20) DEFAULT 'pendente',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de notificações
+CREATE TABLE notificacao (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+    tipo VARCHAR(50) NOT NULL,
+    titulo VARCHAR(100) NOT NULL,
+    mensagem TEXT NOT NULL,
+    lida BOOLEAN DEFAULT FALSE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    dados_adicional JSONB
+);
+
+-- Tabela de convites para grupos
+CREATE TABLE convite_grupo (
+    id SERIAL PRIMARY KEY,
+    grupo_id INTEGER REFERENCES grupo(id) ON DELETE CASCADE,
+    remetente_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+    destinatario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'pendente',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para performance
+CREATE INDEX idx_usuario_email ON usuario(email);
+CREATE INDEX idx_grupo_criador ON grupo(criador_id);
+CREATE INDEX idx_membro_grupo_usuario ON membro_grupo(usuario_id);
+CREATE INDEX idx_membro_grupo_grupo ON membro_grupo(grupo_id);
+CREATE INDEX idx_produto_grupo ON produto(grupo_id);
+CREATE INDEX idx_produto_criador ON produto(criador_id);
+CREATE INDEX idx_reserva_produto ON reserva(produto_id);
+CREATE INDEX idx_reserva_usuario ON reserva(usuario_id);
+CREATE INDEX idx_notificacao_usuario ON notificacao(usuario_id);
+CREATE INDEX idx_convite_grupo_destinatario ON convite_grupo(destinatario_id);
+
+-- Triggers para atualização automática de datas e notificações
+CREATE OR REPLACE FUNCTION update_reserva_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.data_atualizacao = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_reserva_timestamp
+    BEFORE UPDATE ON reserva
+    FOR EACH ROW
+    EXECUTE FUNCTION update_reserva_timestamp();
+
+CREATE OR REPLACE FUNCTION update_convite_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.data_atualizacao = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_convite_timestamp
+    BEFORE UPDATE ON convite_grupo
+    FOR EACH ROW
+    EXECUTE FUNCTION update_convite_timestamp();
+
+CREATE OR REPLACE FUNCTION criar_notificacao_reserva()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO notificacao (usuario_id, tipo, titulo, mensagem, dados_adicional)
+    SELECT 
+        p.criador_id,
+        'reserva',
+        'Nova Reserva',
+        'Uma nova reserva foi solicitada para o produto ' || p.nome,
+        jsonb_build_object(
+            'reserva_id', NEW.id,
+            'produto_id', NEW.produto_id,
+            'usuario_id', NEW.usuario_id
+        )
+    FROM produto p
+    WHERE p.id = NEW.produto_id;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER trigger_notificacao_reserva
+    AFTER INSERT ON reserva
+    FOR EACH ROW
+    EXECUTE FUNCTION criar_notificacao_reserva();
+
+CREATE OR REPLACE FUNCTION criar_notificacao_convite()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO notificacao (usuario_id, tipo, titulo, mensagem, dados_adicional)
+    VALUES (
+        NEW.destinatario_id,
+        'convite',
+        'Novo Convite para Grupo',
+        'Você foi convidado para participar de um grupo',
+        jsonb_build_object(
+            'convite_id', NEW.id,
+            'grupo_id', NEW.grupo_id,
+            'remetente_id', NEW.remetente_id
+        )
+    );
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER trigger_notificacao_convite
+    AFTER INSERT ON convite_grupo
+    FOR EACH ROW
+    EXECUTE FUNCTION criar_notificacao_convite(); 
