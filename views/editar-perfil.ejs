@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <%- include('partials/head', {title: 'Editar Perfil'}) %>
+    <style>
+        body {
+            background-color: #0047CC;
+            padding-bottom: 70px;
+        }
+        .page-title {
+            color: white;
+            font-size: 26px;
+            font-weight: bold;
+            margin: 20px 0 20px 20px;
+        }
+        .edit-profile-container {
+            background: white;
+            border-radius: 15px;
+            margin: 15px;
+            padding: 20px;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
+        .profile-photo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .profile-photo-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            background-color: #f5f5f5;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        .profile-photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo-upload-btn {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+        }
+        .photo-upload-btn i {
+            margin-right: 5px;
+        }
+        #profile-photo {
+            display: none;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .form-group input:focus {
+            border-color: #0047CC;
+            outline: none;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        .btn-cancel {
+            background-color: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 16px;
+            flex: 1;
+            cursor: pointer;
+        }
+        .btn-save {
+            background-color: #0047CC;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 16px;
+            flex: 1;
+            cursor: pointer;
+        }
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="page-title">Editar Perfil</h1>
+    
+    <div class="edit-profile-container">
+        <form id="edit-profile-form" action="/editar-perfil" method="POST" enctype="multipart/form-data">
+            <div class="profile-photo-section">
+                <div class="profile-photo-preview">
+                    <img src="<%= user.photo %>" alt="Foto de perfil">
+                </div>
+                <label for="profile-photo" class="photo-upload-btn">
+                    <i class="fas fa-camera"></i> Alterar foto
+                </label>
+                <input type="file" id="profile-photo" name="profile-photo" accept="image/*">
+            </div>
+            
+            <div class="form-group">
+                <label for="nome">Nome</label>
+                <input type="text" id="nome" name="nome" value="<%= user.name %>" required>
+                <div class="error-message" id="nome-error"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="apelido">Apelido (opcional)</label>
+                <input type="text" id="apelido" name="apelido" value="<%= user.apelido || '' %>">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="<%= user.email %>" required>
+                <div class="error-message" id="email-error"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="telefone">Telefone (opcional)</label>
+                <input type="tel" id="telefone" name="telefone" value="<%= user.telefone || '' %>">
+            </div>
+            
+            <div class="button-group">
+                <a href="/perfil" class="btn-cancel">Cancelar</a>
+                <button type="submit" class="btn-save">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+    
+    <%- include('partials/footer', {page: 'perfil'}) %>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('edit-profile-form');
+            const photoInput = document.getElementById('profile-photo');
+            const photoPreview = document.querySelector('.profile-photo-preview img');
+            
+            // Preview da foto quando selecionada
+            photoInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        photoPreview.src = e.target.result;
+                    }
+                    
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+            
+            // Validação do formulário
+            form.addEventListener('submit', function(e) {
+                let isValid = true;
+                
+                // Validar nome
+                const nome = document.getElementById('nome');
+                if (!nome.value.trim()) {
+                    document.getElementById('nome-error').textContent = 'Nome é obrigatório';
+                    document.getElementById('nome-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('nome-error').style.display = 'none';
+                }
+                
+                // Validar email
+                const email = document.getElementById('email');
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!email.value.trim()) {
+                    document.getElementById('email-error').textContent = 'Email é obrigatório';
+                    document.getElementById('email-error').style.display = 'block';
+                    isValid = false;
+                } else if (!emailRegex.test(email.value)) {
+                    document.getElementById('email-error').textContent = 'Email inválido';
+                    document.getElementById('email-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('email-error').style.display = 'none';
+                }
+                
+                if (!isValid) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

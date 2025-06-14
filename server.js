@@ -571,6 +571,103 @@ app.get('/grupos', async (req, res) => {
     }
 });
 
+/**
+ * Rota: GET /editar-perfil
+ * Descrição: Exibe a página de edição de perfil
+ * Acesso: Apenas usuários autenticados
+ */
+app.get('/editar-perfil', (req, res) => {
+    // Se não há usuário logado, redirecionar para login
+    if (!usuarioAtual) {
+        return res.redirect('/login');
+    }
+    
+    // Dados do usuário para a view
+    const user = {
+        name: usuarioAtual.nome,
+        id: usuarioAtual.id,
+        photo: usuarioAtual.photo,
+        apelido: usuarioAtual.apelido,
+        email: usuarioAtual.email,
+        telefone: usuarioAtual.telefone
+    };
+    
+    // Renderiza a página de edição de perfil
+    res.render('editar-perfil', { user });
+});
+
+/**
+ * Rota: POST /editar-perfil
+ * Descrição: Processa as alterações do perfil
+ * Parâmetros:
+ * - profile-photo: Nova foto de perfil (opcional)
+ * - nome: Nome do usuário
+ * - apelido: Apelido (opcional)
+ * - email: Email do usuário
+ * - telefone: Telefone (opcional)
+ */
+app.post('/editar-perfil', uploadPerfil.single('profile-photo'), async (req, res) => {
+    // Se não há usuário logado, redirecionar para login
+    if (!usuarioAtual) {
+        return res.redirect('/login');
+    }
+    
+    try {
+        const { nome, apelido, email, telefone } = req.body;
+        
+        // Verificar se o email já está em uso por outro usuário
+        if (email !== usuarioAtual.email) {
+            const emailCheck = await db.query('SELECT id FROM usuario WHERE email = $1 AND id != $2', [email, usuarioAtual.id]);
+            if (emailCheck.rows.length > 0) {
+                return res.render('editar-perfil', {
+                    user: {
+                        name: nome,
+                        id: usuarioAtual.id,
+                        photo: usuarioAtual.photo,
+                        apelido,
+                        email,
+                        telefone
+                    },
+                    error: 'Este email já está em uso por outro usuário'
+                });
+            }
+        }
+        
+        // Atualizar informações do usuário
+        usuarioAtual.nome = nome;
+        usuarioAtual.apelido = apelido || '';
+        usuarioAtual.email = email;
+        usuarioAtual.telefone = telefone || '';
+        
+        // Se uma nova foto foi enviada, atualizar o caminho
+        if (req.file) {
+            usuarioAtual.photo = `/images/perfil/${req.file.filename}`;
+        }
+        
+        // Atualizar no banco de dados
+        await db.query(
+            'UPDATE usuario SET nome = $1, apelido = $2, email = $3, telefone = $4, foto = $5 WHERE id = $6',
+            [nome, apelido, email, telefone, usuarioAtual.photo, usuarioAtual.id]
+        );
+        
+        // Redirecionar para a página de perfil com mensagem de sucesso
+        res.redirect('/perfil?success=true');
+    } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        res.render('editar-perfil', {
+            user: {
+                name: req.body.nome,
+                id: usuarioAtual.id,
+                photo: usuarioAtual.photo,
+                apelido: req.body.apelido,
+                email: req.body.email,
+                telefone: req.body.telefone
+            },
+            error: 'Erro ao atualizar perfil. Tente novamente.'
+        });
+    }
+});
+
 // =========================================================
 // API ENDPOINTS
 // =========================================================
