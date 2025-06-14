@@ -165,4 +165,12 @@ $$ language 'plpgsql';
 CREATE TRIGGER trigger_notificacao_convite
     AFTER INSERT ON convite_grupo
     FOR EACH ROW
-    EXECUTE FUNCTION criar_notificacao_convite(); 
+    EXECUTE FUNCTION criar_notificacao_convite();
+    
+
+
+
+ALTER TABLE produto
+ADD COLUMN categoria VARCHAR(100),
+ADD COLUMN quantidade INTEGER DEFAULT 1,
+ADD COLUMN foto VARCHAR(255) DEFAULT '/images/default-product.svg';

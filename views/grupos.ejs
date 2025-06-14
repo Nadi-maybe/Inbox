@@ -105,6 +105,9 @@
             margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .produto-card {
             border: 1px solid #eee;
@@ -161,6 +164,40 @@
             margin-bottom: 10px;
             display: none; /* Inicialmente oculto */
         }
+
+        /* Estilo para o botão de criar produto */
+        .btn-primary {
+            background-color: #0047CC;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s;
+            text-decoration: none;
+        }
+        .btn-primary:hover {
+            background-color: #003399;
+        }
+        .container {
+            padding-bottom: 90px; /* Garante que nada fique atrás do menu inferior */
+        }
+        #criar-produto-btn, #criar-produto-empty-btn {
+            margin-bottom: 80px; /* Afasta o botão do menu inferior */
+            position: fixed;
+            right: 30px;
+            bottom: 90px;
+            z-index: 1000;
+        }
+        @media (max-width: 600px) {
+            #criar-produto-btn, #criar-produto-empty-btn {
+                right: 16px;
+                bottom: 80px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -205,7 +242,12 @@
         </button>
         
         <div class="produtos-container" id="produtos-container">
-            <div class="produtos-title">Produtos do Grupo <span id="grupo-nome"></span></div>
+            <div class="produtos-title">
+                Produtos do Grupo <span id="grupo-nome"></span>
+                <button id="criar-produto-btn" class="btn btn-primary" style="display: none;">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
             
             <div id="produtos-list">
                 <!-- Os produtos serão carregados dinamicamente aqui -->
@@ -216,6 +258,9 @@
                     <i class="fas fa-box-open"></i>
                 </div>
                 <p>Nenhum produto disponível neste grupo</p>
+                <button id="criar-produto-empty-btn" class="btn btn-primary" style="display: none;">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -223,6 +268,97 @@
     <%- include('partials/footer', {page: 'grupos'}) %>
     
     <script src="/js/main.js"></script>
-    <script src="/js/produtos.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const groupItems = document.querySelectorAll('.group-item');
+            const produtosContainer = document.getElementById('produtos-container');
+            const backButton = document.getElementById('back-button');
+            const grupoNome = document.getElementById('grupo-nome');
+            const criarProdutoBtn = document.getElementById('criar-produto-btn');
+            const criarProdutoEmptyBtn = document.getElementById('criar-produto-empty-btn');
+            let selectedGroupId = null;
+
+            groupItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const groupId = this.dataset.id;
+                    const groupName = this.querySelector('.group-name').textContent;
+                    
+                    // Atualiza o estado visual
+                    groupItems.forEach(g => g.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Mostra o container de produtos
+                    produtosContainer.style.display = 'block';
+                    backButton.style.display = 'block';
+                    
+                    // Atualiza o nome do grupo
+                    grupoNome.textContent = groupName;
+                    
+                    // Armazena o ID do grupo selecionado
+                    selectedGroupId = groupId;
+                    
+                    // Mostra o botão de criar produto
+                    criarProdutoBtn.style.display = 'inline-block';
+                    criarProdutoEmptyBtn.style.display = 'inline-block';
+                    
+                    // Carrega os produtos do grupo
+                    loadProdutos(groupId);
+                });
+            });
+
+            backButton.addEventListener('click', function() {
+                produtosContainer.style.display = 'none';
+                backButton.style.display = 'none';
+                groupItems.forEach(g => g.classList.remove('active'));
+                selectedGroupId = null;
+                criarProdutoBtn.style.display = 'none';
+                criarProdutoEmptyBtn.style.display = 'none';
+            });
+
+            criarProdutoBtn.addEventListener('click', function() {
+                if (selectedGroupId) {
+                    window.location.href = `/criar-produto?grupoId=${selectedGroupId}`;
+                }
+            });
+
+            criarProdutoEmptyBtn.addEventListener('click', function() {
+                if (selectedGroupId) {
+                    window.location.href = `/criar-produto?grupoId=${selectedGroupId}`;
+                }
+            });
+
+            function loadProdutos(groupId) {
+                fetch(`/api/produtos/${groupId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const produtosList = document.getElementById('produtos-list');
+                        const noProdutos = document.getElementById('no-produtos');
+                        
+                        if (data.length === 0) {
+                            produtosList.innerHTML = '';
+                            noProdutos.style.display = 'flex';
+                        } else {
+                            noProdutos.style.display = 'none';
+                            produtosList.innerHTML = data.map(produto => `
+                                <div class="produto-card">
+                                    <h4>${produto.nome}</h4>
+                                    <p>${produto.descricao}</p>
+                                    <p><strong>Categoria:</strong> ${produto.categoria}</p>
+                                    <p><strong>Quantidade:</strong> ${produto.quantidade}</p>
+                                    <div class="btn-container">
+                                        <button class="reserve-btn" data-id="${produto.id}">
+                                            <i class="fas fa-calendar-plus"></i> Reservar
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao carregar produtos:', error);
+                    });
+            }
+        });
+    </script>
 </body>
 </html> 

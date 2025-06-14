@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <%- include('partials/head', {title: 'Criar Produto'}) %>
+    <style>
+        .header {
+            margin-bottom: 0;
+        }
+        .blue-area {
+            background-color: #0047CC;
+            height: 120px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .mini-logo {
+            height: 40px;
+            margin-bottom: 10px;
+        }
+        .blue-title {
+            color: white;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-button {
+            background-color: #0047CC;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .card-overlap {
+            margin-top: -40px;
+        }
+        .product-photo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .product-photo {
+            width: 150px;
+            height: 150px;
+            border-radius: 8px;
+            background-color: #e1e1e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+        .product-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .product-photo-icon {
+            font-size: 40px;
+            color: #999;
+        }
+        .photo-text {
+            font-size: 14px;
+            color: #555;
+        }
+        .photo-input {
+            display: none;
+        }
+        .photo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .product-photo:hover .photo-overlay {
+            opacity: 1;
+        }
+        .photo-overlay i {
+            color: white;
+            font-size: 24px;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="blue-area">
+        <img src="/images/LogoMini.png" alt="Inbox Mini" class="mini-logo">
+        <h1 class="blue-title">Criar Produto</h1>
+    </div>
+    
+    <div class="container">
+        <div class="card card-overlap">
+            <form action="/criar-produto" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="grupoId" value="<%= grupoId %>">
+                
+                <div class="product-photo-container">
+                    <div class="product-photo" id="photoPreview">
+                        <div class="product-photo-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div class="photo-overlay">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                    </div>
+                    <span class="photo-text">Adicionar foto do produto</span>
+                    <input type="file" id="productPhoto" name="productPhoto" class="photo-input" accept="image/*">
+                </div>
+                
+                <div class="form-group">
+                    <label for="nome">Nome do Produto</label>
+                    <input type="text" id="nome" name="nome" placeholder="Digite o nome do produto" required value="<%= dados ? dados.nome : '' %>">
+                </div>
+                
+                <div class="form-group">
+                    <label for="descricao">Descrição</label>
+                    <textarea id="descricao" name="descricao" rows="4" placeholder="Digite uma descrição para o produto" required><%= dados ? dados.descricao : '' %></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="categoria">Categoria</label>
+                    <select id="categoria" name="categoria" required>
+                        <option value="">Selecione uma categoria</option>
+                        <option value="eletronicos" <%= dados && dados.categoria === 'eletronicos' ? 'selected' : '' %>>Eletrônicos</option>
+                        <option value="moveis" <%= dados && dados.categoria === 'moveis' ? 'selected' : '' %>>Móveis</option>
+                        <option value="vestuario" <%= dados && dados.categoria === 'vestuario' ? 'selected' : '' %>>Vestuário</option>
+                        <option value="outros" <%= dados && dados.categoria === 'outros' ? 'selected' : '' %>>Outros</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="quantidade">Quantidade Disponível</label>
+                    <input type="number" id="quantidade" name="quantidade" min="1" value="<%= dados ? dados.quantidade : '1' %>" required>
+                </div>
+                
+                <% if (erro) { %>
+                    <div class="error-message">
+                        <%= erro %>
+                    </div>
+                <% } %>
+                
+                <button type="submit" class="form-button">Criar Produto</button>
+            </form>
+        </div>
+    </div>
+    
+    <%- include('partials/footer', {page: ''}) %>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const photoPreview = document.getElementById('photoPreview');
+            const photoInput = document.getElementById('productPhoto');
+            
+            photoPreview.addEventListener('click', function() {
+                photoInput.click();
+            });
+            
+            photoInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        photoPreview.innerHTML = `
+                            <img src="${e.target.result}" alt="Foto do produto">
+                            <div class="photo-overlay">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                        `;
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

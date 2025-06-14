@@ -69,6 +69,27 @@ const storagePerfil = multer.diskStorage({
 });
 
 /**
+ * Configuração do armazenamento para upload de fotos de produtos
+ * Similar à config de perfil, mas com diretório separado
+ */
+const storageProduto = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadPath = path.join(__dirname, 'public/images/produtos');
+        
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        
+        cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'produto-' + uniqueSuffix + ext);
+    }
+});
+
+/**
  * Filtro para permitir apenas imagens nos uploads
  * Retorna erro se o arquivo não for uma imagem
  */
@@ -98,6 +119,18 @@ const upload = multer({
  */
 const uploadPerfil = multer({ 
     storage: storagePerfil,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // Limite de 5MB
+    }
+});
+
+/**
+ * Configuração do middleware Multer para upload de fotos de produtos
+ * Define storage, filtro e limites
+ */
+const uploadProduto = multer({ 
+    storage: storageProduto,
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024 // Limite de 5MB
@@ -830,6 +863,67 @@ app.get('/api/demo/adicionar-convite', (req, res) => {
         message: 'Convite de demonstração criado com sucesso',
         convite
     });
+});
+
+// Rota para exibir a página de criar produto
+app.get('/criar-produto', (req, res) => {
+    if (!usuarioAtual) {
+        return res.redirect('/login');
+    }
+    
+    const grupoId = req.query.grupoId;
+    if (!grupoId) {
+        return res.redirect('/grupos');
+    }
+    
+    res.render('criar-produto', { grupoId, dados: null, erro: null });
+});
+
+// Rota para processar a criação de produto
+app.post('/criar-produto', uploadProduto.single('productPhoto'), async (req, res) => {
+    if (!usuarioAtual) {
+        return res.redirect('/login');
+    }
+    
+    const { nome, descricao, categoria, quantidade, grupoId } = req.body;
+    const photo = req.file ? `/images/produtos/${req.file.filename}` : '/images/default-product.svg';
+    
+    try {
+        const result = await db.query(
+            'INSERT INTO produto (nome, descricao, categoria, quantidade, foto, grupo_id, criador_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [nome, descricao, categoria, quantidade, photo, grupoId, usuarioAtual.id]
+        );
+        
+        res.redirect('/grupos');
+    } catch (error) {
+        console.error('Erro ao criar produto:', error);
+        res.render('criar-produto', { 
+            erro: 'Erro ao criar produto',
+            grupoId,
+            dados: req.body
+        });
+    }
+});
+
+// Rota para obter produtos de um grupo
+app.get('/api/produtos/:grupoId', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.status(401).json({ erro: 'Não autorizado' });
+    }
+    
+    const { grupoId } = req.params;
+    
+    try {
+        const result = await db.query(
+            'SELECT * FROM produto WHERE grupo_id = $1 ORDER BY nome',
+            [grupoId]
+        );
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Erro ao buscar produtos:', error);
+        res.status(500).json({ erro: 'Erro ao buscar produtos' });
+    }
 });
 
 // =========================================================
