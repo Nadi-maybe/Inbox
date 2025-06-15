@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservar Produto</title>
+  <link rel="stylesheet" href="/styles.css"><!-- Ajuste se necessário -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-content {
+      background: #fff; border-radius: 20px; padding: 32px; min-width: 320px;
+    }
+    .modal-actions {
+      display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;
+    }
+    .btn-cancelar {
+      background: #eee; color: #333; border: none; border-radius: 50px; padding: 8px 20px;
+    }
+    .btn-confirmar {
+      background: #0057d8; color: #fff; border: none; border-radius: 50px; padding: 8px 20px;
+    }
+    .btn-reservar {
+      background: #0057d8;
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 8px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .produto-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px #0001;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .produto-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body style="background:#f5f6fa;">
+  <header style="background:#0057d8; color:#fff; padding:24px 0; text-align:center;">
+    <img src="/images/logo-inbox.png" alt="Inbox" style="height:40px;">
+    <h2 style="margin:0;">Reservar Produto</h2>
+  </header>
+  <main style="max-width:600px; margin:32px auto;">
+    <% if (produto) { %>
+      <div class="produto-card">
+        <div class="produto-info">
+          <strong><%= produto.nome %></strong>
+          <span>Categoria: <%= produto.categoria %></span>
+          <span>Quantidade disponível: <%= produto.quantidade %></span>
+        </div>
+        <% if (produto.quantidade > 0) { %>
+          <button class="btn-reservar" onclick="abrirModalReserva('<%= produto.id %>')">
+            <i class="fa fa-calendar"></i> Reservar
+          </button>
+        <% } else { %>
+          <button class="btn-reservar" style="background:#dc3545; cursor:not-allowed;" onclick="alert('Esse produto está indisponível.')" disabled>
+            <i class="fa fa-calendar-times"></i> Indisponível
+          </button>
+        <% } %>
+      </div>
+    <% } else { %>
+      <div style="text-align:center; color:#888;">Produto não encontrado.</div>
+    <% } %>
+  </main>
+
+  <!-- Modal de Reserva -->
+  <div id="modalReserva" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h2 style="color:#0057d8;">Reservar Produto</h2>
+      <form id="formReserva" method="POST" action="/reservar">
+        <input type="hidden" name="produto_id" id="produto_id">
+        <label>Data de Início:</label>
+        <input type="date" name="data_inicio" required>
+        <label>Data de Fim:</label>
+        <input type="date" name="data_fim" required>
+        <label>Observações:</label>
+        <textarea name="observacoes" placeholder="(Opcional)"></textarea>
+        <div class="modal-actions">
+          <button type="button" onclick="fecharModalReserva()" class="btn-cancelar">Cancelar</button>
+          <button type="submit" class="btn-confirmar">Confirmar Reserva</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function abrirModalReserva(produtoId) {
+      document.getElementById('modalReserva').style.display = 'flex';
+      document.getElementById('produto_id').value = produtoId;
+    }
+    function fecharModalReserva() {
+      document.getElementById('modalReserva').style.display = 'none';
+    }
+    // Fecha modal ao clicar fora do conteúdo
+    document.getElementById('modalReserva').addEventListener('click', function(e) {
+      if (e.target === this) fecharModalReserva();
+    });
+  </script>
+</body>
+</html> 

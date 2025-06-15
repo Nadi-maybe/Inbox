@@ -179,22 +179,26 @@
         </div>
         
         <h3 class="section-title">Registros</h3>
-        <div class="card">
-            <% if (user.registros && user.registros.length > 0) { %>
-                <% user.registros.forEach(registro => { %>
-                    <div class="registro-item" data-id="<%= registro.id %>">
-                        <h4><%= registro.nome %></h4>
-                        <p>Emprestado até: <span class="registro-time"><%= registro.data %></span></p>
-                    </div>
-                <% }); %>
-            <% } else { %>
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    <p>Nenhum registro feito</p>
+        <div class="card" id="registros-card">
+            <div id="registros-list"></div>
+            <div class="empty-state" id="no-registros" style="display:none;">
+                <div class="empty-icon">
+                    <i class="fas fa-clipboard-list"></i>
                 </div>
-            <% } %>
+                <p>Nenhum registro feito</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de confirmação de devolução -->
+    <div id="modal-devolver" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:2000;">
+        <div style="background:#fff; border-radius:16px; padding:32px; min-width:320px; text-align:center;">
+            <h3 style="color:#0047CC;">Tem certeza que deseja devolver?</h3>
+            <div style="margin:20px 0;">
+                <span id="modal-produto-nome" style="font-weight:bold;"></span>
+            </div>
+            <button id="btn-confirmar-devolver" style="background:#0047CC; color:#fff; border:none; border-radius:5px; padding:8px 20px; margin-right:10px;">Sim</button>
+            <button id="btn-cancelar-devolver" style="background:#eee; color:#333; border:none; border-radius:5px; padding:8px 20px;">Cancelar</button>
         </div>
     </div>
     
@@ -202,5 +206,64 @@
     
     <script src="/js/main.js"></script>
     <script src="/js/index.js"></script>
+    <script>
+    // Função para carregar registros
+    function loadRegistros() {
+        fetch('/api/minhas-reservas')
+            .then(res => res.json())
+            .then(data => {
+                const registrosList = document.getElementById('registros-list');
+                const noRegistros = document.getElementById('no-registros');
+                if (!data || data.length === 0) {
+                    registrosList.innerHTML = '';
+                    noRegistros.style.display = 'flex';
+                    return;
+                }
+                noRegistros.style.display = 'none';
+                registrosList.innerHTML = data.map(registro => `
+                    <div class="registro-item" data-id="${registro.id}" data-nome="${registro.nome}">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:50px; height:50px; border-radius:8px; overflow:hidden; background:#eee;">
+                                <img src="${registro.foto}" alt="${registro.nome}" style="width:100%; height:100%; object-fit:cover;">
+                            </div>
+                            <div style="flex:1;">
+                                <h4 style="margin:0;">${registro.nome}</h4>
+                                <p style="margin:0; font-size:13px; color:#666;">Categoria: ${registro.categoria || '-'}</p>
+                                <p style="margin:0; font-size:13px;">Emprestado até: <span class="registro-time">${registro.data_fim ? registro.data_fim.split('T')[0] : '-'}</span></p>
+                            </div>
+                            <button class="btn-devolver" style="background:#dc3545; color:#fff; border:none; border-radius:5px; padding:6px 14px; cursor:pointer;">Devolver</button>
+                        </div>
+                    </div>
+                `).join('');
+            });
+    }
+
+    // Modal de confirmação
+    let reservaParaDevolver = null;
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-devolver')) {
+            const item = e.target.closest('.registro-item');
+            reservaParaDevolver = item.getAttribute('data-id');
+            document.getElementById('modal-produto-nome').textContent = item.getAttribute('data-nome');
+            document.getElementById('modal-devolver').style.display = 'flex';
+        }
+        if (e.target.id === 'btn-cancelar-devolver') {
+            document.getElementById('modal-devolver').style.display = 'none';
+            reservaParaDevolver = null;
+        }
+        if (e.target.id === 'btn-confirmar-devolver' && reservaParaDevolver) {
+            fetch(`/api/devolver-reserva/${reservaParaDevolver}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(() => {
+                    document.getElementById('modal-devolver').style.display = 'none';
+                    reservaParaDevolver = null;
+                    loadRegistros();
+                });
+        }
+    });
+
+    // Carregar registros ao abrir a página
+    loadRegistros();
+    </script>
 </body>
 </html> 

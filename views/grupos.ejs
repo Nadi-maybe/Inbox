@@ -346,9 +346,15 @@
                                     <p><strong>Categoria:</strong> ${produto.categoria}</p>
                                     <p><strong>Quantidade:</strong> ${produto.quantidade}</p>
                                     <div class="btn-container">
-                                        <button class="reserve-btn" data-id="${produto.id}">
-                                            <i class="fas fa-calendar-plus"></i> Reservar
-                                        </button>
+                                        ${produto.quantidade > 0 ? `
+                                            <a class="reserve-btn" href="/reserva/${produto.id}">
+                                                <i class="fas fa-calendar-plus"></i> Reservar
+                                            </a>
+                                        ` : `
+                                            <button class="reserve-btn" style="background-color: #dc3545; cursor: not-allowed;" onclick="alert('Esse produto está indisponível.')" disabled>
+                                                <i class="fas fa-calendar-times"></i> Indisponível
+                                            </button>
+                                        `}
                                     </div>
                                 </div>
                             `).join('');

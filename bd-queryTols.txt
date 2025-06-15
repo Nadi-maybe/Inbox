@@ -174,3 +174,238 @@ ALTER TABLE produto
 ADD COLUMN categoria VARCHAR(100),
 ADD COLUMN quantidade INTEGER DEFAULT 1,
 ADD COLUMN foto VARCHAR(255) DEFAULT '/images/default-product.svg';
+
+
+
+-- =========================================================
+-- MODIFICAÇÕES NO BANCO DE DADOS PARA SISTEMA DE RESERVAS
+-- =========================================================
+
+-- 1. Primeiro, vamos criar a tabela de unidades do produto
+CREATE TABLE produto_unidade (
+    id SERIAL PRIMARY KEY,
+    produto_id INTEGER REFERENCES produto(id) ON DELETE CASCADE,
+    codigo VARCHAR(50) UNIQUE,
+    status VARCHAR(20) DEFAULT 'disponivel',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_produto FOREIGN KEY (produto_id) REFERENCES produto(id) ON DELETE CASCADE
+);
+
+-- 2. Adicionar índices para melhor performance
+CREATE INDEX idx_produto_unidade_produto ON produto_unidade(produto_id);
+CREATE INDEX idx_produto_unidade_status ON produto_unidade(status);
+
+-- 3. Modificar a tabela reserva para incluir novos campos
+ALTER TABLE reserva
+ADD COLUMN unidade_id INTEGER REFERENCES produto_unidade(id),
+ADD COLUMN quantidade INTEGER DEFAULT 1,
+ADD COLUMN motivo_cancelamento TEXT,
+ADD COLUMN observacoes TEXT;
+
+-- 4. Criar índice para a nova coluna unidade_id
+CREATE INDEX idx_reserva_unidade ON reserva(unidade_id);
+
+-- 5. Criar tabela de histórico de reservas
+CREATE TABLE reserva_historico (
+    id SERIAL PRIMARY KEY,
+    reserva_id INTEGER REFERENCES reserva(id) ON DELETE CASCADE,
+    status_anterior VARCHAR(20),
+    status_novo VARCHAR(20),
+    motivo TEXT,
+    usuario_id INTEGER REFERENCES usuario(id),
+    data_alteracao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. Criar índices para a tabela de histórico
+CREATE INDEX idx_reserva_historico_reserva ON reserva_historico(reserva_id);
+CREATE INDEX idx_reserva_historico_usuario ON reserva_historico(usuario_id);
+
+-- 7. Criar função para atualizar quantidade disponível
+CREATE OR REPLACE FUNCTION atualizar_quantidade_produto()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Atualiza a quantidade disponível no produto
+    UPDATE produto 
+    SET quantidade = (
+        SELECT COUNT(*) 
+        FROM produto_unidade 
+        WHERE produto_id = NEW.produto_id 
+        AND status = 'disponivel'
+    )
+    WHERE id = NEW.produto_id;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- 8. Criar trigger para atualizar quantidade
+CREATE TRIGGER trigger_atualizar_quantidade
+    AFTER INSERT OR UPDATE OR DELETE ON produto_unidade
+    FOR EACH ROW
+    EXECUTE FUNCTION atualizar_quantidade_produto();
+
+-- 9. Criar função para registrar histórico de reservas
+CREATE OR REPLACE FUNCTION registrar_historico_reserva()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE') THEN
+        INSERT INTO reserva_historico (
+            reserva_id,
+            status_anterior,
+            status_novo,
+            usuario_id
+        ) VALUES (
+            NEW.id,
+            OLD.status,
+            NEW.status,
+            NEW.usuario_id
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- 10. Criar trigger para histórico de reservas
+CREATE TRIGGER trigger_historico_reserva
+    AFTER UPDATE ON reserva
+    FOR EACH ROW
+    EXECUTE FUNCTION registrar_historico_reserva();
+
+-- 11. Função para verificar disponibilidade de unidade
+CREATE OR REPLACE FUNCTION verificar_disponibilidade_unidade(
+    p_produto_id INTEGER,
+    p_data_inicio TIMESTAMP,
+    p_data_fim TIMESTAMP
+) RETURNS TABLE (
+    unidade_id INTEGER,
+    codigo VARCHAR(50)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT pu.id, pu.codigo
+    FROM produto_unidade pu
+    WHERE pu.produto_id = p_produto_id
+    AND pu.status = 'disponivel'
+    AND NOT EXISTS (
+        SELECT 1
+        FROM reserva r
+        WHERE r.unidade_id = pu.id
+        AND r.status IN ('aprovada', 'em_andamento')
+        AND (
+            (r.data_inicio <= p_data_fim AND r.data_fim >= p_data_inicio)
+        )
+    )
+    LIMIT 1;
+END;
+$$ language 'plpgsql';
+
+-- 12. Função para criar reserva com checagem de disponibilidade (corrigida)
+CREATE OR REPLACE FUNCTION criar_reserva(
+    p_produto_id INTEGER,
+    p_usuario_id INTEGER,
+    p_data_inicio TIMESTAMP,
+    p_data_fim TIMESTAMP,
+    p_quantidade INTEGER
+) RETURNS VOID AS $$
+DECLARE
+    quantidade_disponivel INTEGER;
+BEGIN
+    -- Conta quantas reservas já existem para o produto no período
+    SELECT produto.quantidade - COUNT(*)
+    INTO quantidade_disponivel
+    FROM produto
+    LEFT JOIN reserva ON produto.id = reserva.produto_id
+        AND (
+            (reserva.data_inicio, reserva.data_fim) OVERLAPS (p_data_inicio, p_data_fim)
+        )
+    WHERE produto.id = p_produto_id
+    GROUP BY produto.quantidade;
+
+    IF quantidade_disponivel IS NULL OR quantidade_disponivel < p_quantidade THEN
+        RAISE EXCEPTION 'Nenhuma unidade disponível para o período solicitado';
+    END IF;
+
+    -- Insere a reserva
+    INSERT INTO reserva (produto_id, usuario_id, data_inicio, data_fim, status)
+    VALUES (p_produto_id, p_usuario_id, p_data_inicio, p_data_fim, 'pendente');
+END;
+$$ LANGUAGE plpgsql;
+
+-- 13. Função para aprovar reserva
+CREATE OR REPLACE FUNCTION aprovar_reserva(
+    p_reserva_id INTEGER,
+    p_usuario_id INTEGER
+) RETURNS BOOLEAN AS $$
+DECLARE
+    v_produto_id INTEGER;
+    v_unidade_id INTEGER;
+BEGIN
+    -- Verificar se o usuário é o criador do produto
+    SELECT produto_id, unidade_id INTO v_produto_id, v_unidade_id
+    FROM reserva r
+    JOIN produto p ON p.id = r.produto_id
+    WHERE r.id = p_reserva_id
+    AND p.criador_id = p_usuario_id;
+
+    IF v_produto_id IS NULL THEN
+        RAISE EXCEPTION 'Usuário não autorizado ou reserva não encontrada';
+    END IF;
+
+    -- Atualizar status da reserva
+    UPDATE reserva
+    SET status = 'aprovada'
+    WHERE id = p_reserva_id;
+
+    -- Atualizar status da unidade
+    UPDATE produto_unidade
+    SET status = 'em_uso'
+    WHERE id = v_unidade_id;
+
+    RETURN TRUE;
+END;
+$$ language 'plpgsql';
+
+-- 14. Função para finalizar reserva
+CREATE OR REPLACE FUNCTION finalizar_reserva(
+    p_reserva_id INTEGER,
+    p_usuario_id INTEGER
+) RETURNS BOOLEAN AS $$
+DECLARE
+    v_unidade_id INTEGER;
+BEGIN
+    -- Verificar se o usuário é o dono da reserva
+    SELECT unidade_id INTO v_unidade_id
+    FROM reserva
+    WHERE id = p_reserva_id
+    AND usuario_id = p_usuario_id;
+
+    IF v_unidade_id IS NULL THEN
+        RAISE EXCEPTION 'Usuário não autorizado ou reserva não encontrada';
+    END IF;
+
+    -- Atualizar status da reserva
+    UPDATE reserva
+    SET status = 'concluida'
+    WHERE id = p_reserva_id;
+
+    -- Atualizar status da unidade
+    UPDATE produto_unidade
+    SET status = 'disponivel'
+    WHERE id = v_unidade_id;
+
+    RETURN TRUE;
+END;
+$$ language 'plpgsql';
+
+-- 15. Inserir unidades para produtos existentes
+DO $$
+DECLARE
+    v_produto RECORD;
+    v_quantidade INTEGER;
+BEGIN
+    FOR v_produto IN SELECT id, quantidade FROM produto LOOP
+        FOR i IN 1..v_produto.quantidade LOOP
+            INSERT INTO produto_unidade (produto_id, codigo)
+            VALUES (v_produto.id, 'UNID-' || v_produto.id || '-' || i);
+        END LOOP;
+    END LOOP;
+END $$;

@@ -367,7 +367,7 @@ app.get('/completar-perfil', (req, res) => {
  * - apelido: Apelido opcional
  * - telefone: Telefone opcional
  */
-app.post('/completar-perfil', uploadPerfil.single('profile-photo'), (req, res) => {
+app.post('/completar-perfil', uploadPerfil.single('profile-photo'), async (req, res) => {
     // Se não há usuário logado, redirecionar para login
     if (!usuarioAtual) {
         return res.redirect('/login');
@@ -375,25 +375,26 @@ app.post('/completar-perfil', uploadPerfil.single('profile-photo'), (req, res) =
     
     try {
         const { apelido, telefone } = req.body;
-        
-        // Atualizar informações do usuário
-        usuarioAtual.apelido = apelido || '';
-        usuarioAtual.telefone = telefone || '';
+        let photoPath = usuarioAtual.photo;
         
         // Se uma foto foi enviada, atualizar o caminho
         if (req.file) {
-            usuarioAtual.photo = `/images/perfil/${req.file.filename}`;
+            photoPath = `/images/perfil/${req.file.filename}`;
         }
+        
+        // Atualizar informações no banco de dados
+        await db.query(
+            'UPDATE usuario SET apelido = $1, telefone = $2, foto = $3 WHERE id = $4',
+            [apelido || '', telefone || '', photoPath, usuarioAtual.id]
+        );
+        
+        // Atualizar informações do usuário em memória
+        usuarioAtual.apelido = apelido || '';
+        usuarioAtual.telefone = telefone || '';
+        usuarioAtual.photo = photoPath;
         
         // Remover flag de registro recém-criado
         usuarioAtual.registroCriado = false;
-        
-        // Atualizar o usuário no array de usuários
-        // NOTA: Em produção, atualizar no banco de dados
-        const index = usuarios.findIndex(u => u.id === usuarioAtual.id);
-        if (index !== -1) {
-            usuarios[index] = usuarioAtual;
-        }
         
         // Redirecionar para a página inicial
         res.redirect('/');
@@ -481,13 +482,18 @@ app.get('/produtos', (req, res) => {
  * Descrição: Página de perfil do usuário
  * Acesso: Apenas usuários autenticados
  */
-app.get('/perfil', (req, res) => {
-    // Se não há usuário logado, redirecionar para login
+app.get('/perfil', async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
-    
-    // Dados do usuário para a view
+
+    // Buscar grupos do usuário (tanto os que ele criou quanto os que participa)
+    const gruposResult = await db.query(`
+        SELECT g.* FROM grupo g
+        LEFT JOIN membro_grupo mg ON g.id = mg.grupo_id
+        WHERE g.criador_id = $1 OR mg.usuario_id = $1
+    `, [usuarioAtual.id]);
+
     const user = {
         name: usuarioAtual.nome,
         id: usuarioAtual.id,
@@ -497,9 +503,8 @@ app.get('/perfil', (req, res) => {
         telefone: usuarioAtual.telefone,
         historico: []
     };
-    
-    // Renderiza a página de perfil
-    res.render('perfil', { user });
+
+    res.render('perfil', { user, grupos: gruposResult.rows });
 });
 
 /**
@@ -914,15 +919,121 @@ app.get('/api/produtos/:grupoId', async (req, res) => {
     const { grupoId } = req.params;
     
     try {
-        const result = await db.query(
-            'SELECT * FROM produto WHERE grupo_id = $1 ORDER BY nome',
-            [grupoId]
-        );
+        const result = await db.query(`
+            SELECT p.*, 
+                (p.quantidade - COALESCE(
+                    (SELECT COUNT(*) FROM reserva r 
+                     WHERE r.produto_id = p.id 
+                     AND r.status IN ('pendente', 'aprovada', 'em_andamento')
+                     AND r.data_fim >= CURRENT_DATE), 0)) AS quantidade_disponivel
+            FROM produto p
+            WHERE p.grupo_id = $1
+            ORDER BY p.nome
+        `, [grupoId]);
         
-        res.json(result.rows);
+        // Ajustar para retornar quantidade_disponivel no lugar de quantidade
+        const produtos = result.rows.map(produto => ({
+            ...produto,
+            quantidade: produto.quantidade_disponivel
+        }));
+        
+        res.json(produtos);
     } catch (error) {
         console.error('Erro ao buscar produtos:', error);
         res.status(500).json({ erro: 'Erro ao buscar produtos' });
+    }
+});
+
+// Rota para exibir a tela de reserva de um produto
+app.get('/reserva/:produtoId', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.redirect('/login');
+    }
+    const produtoId = req.params.produtoId;
+    try {
+        // Buscar o produto no banco de dados
+        const result = await db.query('SELECT * FROM produto WHERE id = $1', [produtoId]);
+        if (result.rows.length === 0) {
+            return res.status(404).render('reserva', { produto: null });
+        }
+        const produto = result.rows[0];
+        res.render('reserva', { produto });
+    } catch (error) {
+        console.error('Erro ao buscar produto para reserva:', error);
+        res.status(500).render('reserva', { produto: null });
+    }
+});
+
+// Rota para processar o formulário de reserva
+app.post('/reservar', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.redirect('/login');
+    }
+    const { produto_id, data_inicio, data_fim, observacoes } = req.body;
+    const usuario_id = usuarioAtual.id;
+    if (!produto_id || !data_inicio || !data_fim) {
+        return res.status(400).send('Dados incompletos');
+    }
+    try {
+        // Buscar o produto para saber a quantidade
+        const produtoResult = await db.query('SELECT * FROM produto WHERE id = $1', [produto_id]);
+        if (produtoResult.rows.length === 0) {
+            return res.status(404).send('Produto não encontrado');
+        }
+        const produto = produtoResult.rows[0];
+        // Chamar a função do banco para criar a reserva (verifica disponibilidade de unidade)
+        await db.query(
+            `SELECT criar_reserva($1, $2, $3, $4, 1)`,
+            [produto_id, usuario_id, data_inicio, data_fim]
+        );
+        // Opcional: adicionar observações na reserva (se necessário, pode ser ajustado no banco)
+        // Redirecionar para a tela de grupos ou mostrar mensagem de sucesso
+        res.redirect('/grupos');
+    } catch (err) {
+        let msg = 'Erro ao criar reserva';
+        if (err.message) {
+            msg += ': ' + err.message;
+        }
+        res.status(400).send(msg);
+    }
+});
+
+// Endpoint para listar reservas ativas do usuário logado
+app.get('/api/minhas-reservas', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.status(401).json({ erro: 'Não autorizado' });
+    }
+    try {
+        const result = await db.query(`
+            SELECT r.id, r.data_fim, r.status, p.nome, p.foto, p.categoria
+            FROM reserva r
+            JOIN produto p ON r.produto_id = p.id
+            WHERE r.usuario_id = $1 AND r.status IN ('pendente', 'aprovada', 'em_andamento')
+            ORDER BY r.data_fim
+        `, [usuarioAtual.id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Erro ao buscar reservas:', error);
+        res.status(500).json({ erro: 'Erro ao buscar reservas' });
+    }
+});
+
+// Endpoint para devolver/finalizar reserva
+app.post('/api/devolver-reserva/:id', async (req, res) => {
+    if (!usuarioAtual) {
+        return res.status(401).json({ erro: 'Não autorizado' });
+    }
+    const reservaId = req.params.id;
+    try {
+        // Atualiza status da reserva para concluída
+        await db.query(
+            `UPDATE reserva SET status = 'concluida' WHERE id = $1 AND usuario_id = $2`,
+            [reservaId, usuarioAtual.id]
+        );
+        res.json({ sucesso: true });
+    } catch (error) {
+        console.error('Erro ao devolver reserva:', error);
+        res.status(500).json({ erro: 'Erro ao devolver reserva' });
     }
 });
 
