@@ -1,27 +1,27 @@
-// index.js - Funcionalidades específicas da página inicial
+
 
 document.addEventListener('DOMContentLoaded', function() {
     initIndexActions();
 });
 
-// Inicializar ações da página inicial
+
 function initIndexActions() {
-    // Adicionar funcionalidade aos itens de grupo
+    
     initGroupItems();
     
-    // Adicionar funcionalidade aos itens de registro
+    
     initRegistroItems();
     
-    // Inicializar botão de adicionar grupo
+    
     initAddGroupButton();
 }
 
-// Inicializar botão de adicionar grupo
+
 function initAddGroupButton() {
     const btn = document.querySelector('.card-title .btn');
     if (!btn) return;
     
-    // Adicionar efeito de hover e clique
+    
     btn.addEventListener('mouseenter', function() {
         this.style.transform = 'scale(1.1)';
     });
@@ -39,12 +39,12 @@ function initAddGroupButton() {
     });
 }
 
-// Inicializar itens de grupo
+
 function initGroupItems() {
     const groupItems = document.querySelectorAll('.group-item');
     
     groupItems.forEach(item => {
-        // Adicionar evento de clique para mostrar detalhes do grupo
+        
         item.addEventListener('click', function() {
             const groupId = this.getAttribute('data-id');
             const groupName = this.querySelector('.group-name').textContent;
@@ -55,12 +55,12 @@ function initGroupItems() {
     });
 }
 
-// Inicializar itens de registro
+
 function initRegistroItems() {
     const registroItems = document.querySelectorAll('.registro-item');
     
     registroItems.forEach(item => {
-        // Adicionar evento de clique para mostrar detalhes do registro
+        
         item.addEventListener('click', function() {
             const registroId = this.getAttribute('data-id');
             const registroNome = this.querySelector('h4').textContent;
@@ -71,9 +71,9 @@ function initRegistroItems() {
     });
 }
 
-// Mostrar detalhes do grupo
+
 function showGroupDetails(id, name, photo) {
-    // Criar elementos do modal
+    
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.innerHTML = `
@@ -106,7 +106,7 @@ function showGroupDetails(id, name, photo) {
         </div>
     `;
     
-    // Estilizar o modal
+    
     modal.style.display = 'block';
     modal.style.position = 'fixed';
     modal.style.zIndex = '100';
@@ -196,7 +196,7 @@ function showGroupDetails(id, name, photo) {
         });
     });
     
-    // Adicionar evento para fechar o modal
+    
     closeModal.addEventListener('click', function() {
         modal.style.animation = 'fadeOut 0.3s';
         setTimeout(() => {
@@ -204,7 +204,7 @@ function showGroupDetails(id, name, photo) {
         }, 280);
     });
     
-    // Adicionar evento para clicar fora e fechar
+    
     window.addEventListener('click', function(event) {
         if (event.target === modal) {
             modal.style.animation = 'fadeOut 0.3s';
@@ -214,29 +214,29 @@ function showGroupDetails(id, name, photo) {
         }
     });
     
-    // Adicionar eventos aos botões de ação
+    
     const viewItemsBtn = modal.querySelector('.view-items-btn');
     viewItemsBtn.addEventListener('click', function() {
-        // Implementar visualização de itens do grupo
+        
         showToast('Visualização de itens em desenvolvimento', 'info');
     });
     
     const addMemberBtn = modal.querySelector('.add-member-btn');
     addMemberBtn.addEventListener('click', function() {
-        // Implementar adição de membro
+        
         showToast('Adicionar membro em desenvolvimento', 'info');
     });
     
     const editGroupBtn = modal.querySelector('.edit-group-btn');
     editGroupBtn.addEventListener('click', function() {
-        // Implementar edição de grupo
+        
         showToast('Edição de grupo em desenvolvimento', 'info');
     });
     
-    // Adicionar o modal ao corpo do documento
+    
     document.body.appendChild(modal);
     
-    // Adicionar keyframes para animações
+    
     const style = document.createElement('style');
     style.innerHTML = `
         @keyframes fadeIn {
@@ -255,9 +255,9 @@ function showGroupDetails(id, name, photo) {
     document.head.appendChild(style);
 }
 
-// Mostrar detalhes de um registro
+
 function showRegistroDetails(id, nome, data) {
-    // Criar elementos do modal
+    
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.innerHTML = `
@@ -288,7 +288,7 @@ function showRegistroDetails(id, nome, data) {
         </div>
     `;
     
-    // Estilizar o modal
+    
     modal.style.display = 'block';
     modal.style.position = 'fixed';
     modal.style.zIndex = '100';
@@ -377,7 +377,7 @@ function showRegistroDetails(id, nome, data) {
         });
     });
     
-    // Adicionar evento para fechar o modal
+    
     closeModal.addEventListener('click', function() {
         modal.style.animation = 'fadeOut 0.3s';
         setTimeout(() => {
@@ -385,7 +385,7 @@ function showRegistroDetails(id, nome, data) {
         }, 280);
     });
     
-    // Adicionar evento para clicar fora e fechar
+    
     window.addEventListener('click', function(event) {
         if (event.target === modal) {
             modal.style.animation = 'fadeOut 0.3s';
@@ -395,34 +395,34 @@ function showRegistroDetails(id, nome, data) {
         }
     });
     
-    // Adicionar eventos aos botões de ação
+    
     const extendBtn = modal.querySelector('.extend-btn');
     extendBtn.addEventListener('click', function() {
-        // Implementar extensão de prazo
+        
         showToast('Extensão de prazo em desenvolvimento', 'info');
     });
     
     const returnBtn = modal.querySelector('.return-btn');
     returnBtn.addEventListener('click', function() {
-        // Implementar devolução de item
+        
         showConfirmDialog(
             'Confirmar Devolução', 
             `Deseja confirmar a devolução do item "${nome}"?`,
             function() {
-                // Aqui implementaríamos a lógica real de devolução
-                // Por enquanto, apenas removemos o item da lista visual
+                
+                
                 const registroItem = document.querySelector(`.registro-item[data-id="${id}"]`);
                 if (registroItem) {
                     registroItem.style.animation = 'slideOutRight 0.3s';
                     setTimeout(() => {
                         registroItem.remove();
                         
-                        // Verificar se ainda há registros
+                        
                         const registrosCard = document.querySelectorAll('.card')[1];
                         const registroItems = registrosCard.querySelectorAll('.registro-item');
                         
                         if (registroItems.length === 0) {
-                            // Se não houver mais registros, mostrar o estado vazio
+                            
                             const emptyState = document.createElement('div');
                             emptyState.className = 'empty-state';
                             emptyState.innerHTML = `
@@ -445,10 +445,10 @@ function showRegistroDetails(id, nome, data) {
         );
     });
     
-    // Adicionar o modal ao corpo do documento
+    
     document.body.appendChild(modal);
     
-    // Adicionar keyframes para animações
+    
     const style = document.createElement('style');
     style.innerHTML = `
         @keyframes fadeIn {
@@ -471,9 +471,9 @@ function showRegistroDetails(id, nome, data) {
     document.head.appendChild(style);
 }
 
-// Função para mostrar um toast de notificação
+
 function showToast(message, type = 'info') {
-    // Criar elemento toast
+    
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
@@ -483,7 +483,7 @@ function showToast(message, type = 'info') {
         <div class="toast-message">${message}</div>
     `;
     
-    // Estilizar o toast
+    
     toast.style.position = 'fixed';
     toast.style.bottom = '20px';
     toast.style.right = '20px';
@@ -504,16 +504,16 @@ function showToast(message, type = 'info') {
     toastIcon.style.marginRight = '10px';
     toastIcon.style.fontSize = '20px';
     
-    // Adicionar ao corpo do documento
+    
     document.body.appendChild(toast);
     
-    // Animar entrada
+    
     setTimeout(() => {
         toast.style.opacity = '1';
         toast.style.transform = 'translateY(0)';
     }, 10);
     
-    // Remover após alguns segundos
+    
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(20px)';
@@ -524,9 +524,9 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Função para mostrar diálogo de confirmação
+
 function showConfirmDialog(title, message, confirmCallback) {
-    // Criar elementos do modal
+    
     const modal = document.createElement('div');
     modal.className = 'confirm-modal';
     modal.innerHTML = `
@@ -544,7 +544,7 @@ function showConfirmDialog(title, message, confirmCallback) {
         </div>
     `;
     
-    // Estilizar o modal
+    
     modal.style.display = 'block';
     modal.style.position = 'fixed';
     modal.style.zIndex = '110';
@@ -596,7 +596,7 @@ function showConfirmDialog(title, message, confirmCallback) {
     confirmBtn.style.borderRadius = '4px';
     confirmBtn.style.cursor = 'pointer';
     
-    // Adicionar eventos aos botões
+    
     cancelBtn.addEventListener('click', function() {
         modal.style.animation = 'fadeOut 0.3s';
         setTimeout(() => {
@@ -615,10 +615,10 @@ function showConfirmDialog(title, message, confirmCallback) {
         }, 280);
     });
     
-    // Adicionar o modal ao corpo do documento
+    
     document.body.appendChild(modal);
     
-    // Adicionar keyframes para animações (caso não existam)
+    
     if (!document.querySelector('style[data-animations="confirm"]')) {
         const style = document.createElement('style');
         style.setAttribute('data-animations', 'confirm');

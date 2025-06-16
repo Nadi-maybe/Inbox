@@ -1,77 +1,44 @@
-// =========================================================
-// CONFIGURAÇÃO BÁSICA DO SERVIDOR
-// =========================================================
-
-/**
- * Importação dos módulos necessários
- * Express: Framework web para criar o servidor e gerenciar rotas
- * Path: Biblioteca para trabalhar com caminhos de arquivos
- * Body-parser: Middleware para interpretar dados enviados pelo usuário
- * Multer: Middleware para processar upload de arquivos
- * FS: Módulo para operações de sistema de arquivos
- */
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const fs = require('fs');
-// Adicionando conexão com PostgreSQL
 const db = require('./db');
 
-/**
- * Configuração do armazenamento para upload de arquivos de grupos
- * Determina onde os arquivos serão salvos e como serão nomeados
- */
 const storage = multer.diskStorage({
-    // Define o diretório de destino para os uploads
     destination: function (req, file, cb) {
         const uploadPath = path.join(__dirname, 'public/images/grupos');
         
-        // Cria o diretório se não existir
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
         }
         
         cb(null, uploadPath);
     },
-    // Define o nome do arquivo com timestamp para evitar duplicatas
     filename: function (req, file, cb) {
-        // Gera um nome único para o arquivo usando timestamp e número aleatório
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
         cb(null, 'group-' + uniqueSuffix + ext);
     }
 });
 
-/**
- * Configuração do armazenamento para upload de fotos de perfil
- * Similar à config de grupos, mas com diretório separado
- */
 const storagePerfil = multer.diskStorage({
-    // Define o diretório de destino para os uploads de perfil
     destination: function (req, file, cb) {
         const uploadPath = path.join(__dirname, 'public/images/perfil');
         
-        // Cria o diretório se não existir
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
         }
         
         cb(null, uploadPath);
     },
-    // Define o nome do arquivo com timestamp para evitar duplicatas
     filename: function (req, file, cb) {
-        // Gera um nome único para o arquivo
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
         cb(null, 'profile-' + uniqueSuffix + ext);
     }
 });
 
-/**
- * Configuração do armazenamento para upload de fotos de produtos
- * Similar à config de perfil, mas com diretório separado
- */
 const storageProduto = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadPath = path.join(__dirname, 'public/images/produtos');
@@ -89,10 +56,6 @@ const storageProduto = multer.diskStorage({
     }
 });
 
-/**
- * Filtro para permitir apenas imagens nos uploads
- * Retorna erro se o arquivo não for uma imagem
- */
 const fileFilter = (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
         cb(null, true);
@@ -101,90 +64,47 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-/**
- * Configuração do middleware Multer para upload de arquivos de grupos
- * Define storage, filtro e limites
- */
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // Limite de 5MB
+        fileSize: 5 * 1024 * 1024
     }
 });
 
-/**
- * Configuração do middleware Multer para upload de fotos de perfil
- * Define storage, filtro e limites
- */
 const uploadPerfil = multer({ 
     storage: storagePerfil,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // Limite de 5MB
+        fileSize: 5 * 1024 * 1024
     }
 });
 
-/**
- * Configuração do middleware Multer para upload de fotos de produtos
- * Define storage, filtro e limites
- */
 const uploadProduto = multer({ 
     storage: storageProduto,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // Limite de 5MB
+        fileSize: 5 * 1024 * 1024
     }
 });
 
-// Criando a aplicação Express
 const app = express();
-// Define a porta onde o servidor vai rodar (3000 por padrão)
 const PORT = process.env.PORT || 3000;
 
-// =========================================================
-// CONFIGURAÇÃO DA VISUALIZAÇÃO E MIDDLEWARES
-// =========================================================
-
-/**
- * Configurando o EJS como sistema de templates
- * EJS permite a criação de páginas HTML dinâmicas
- */
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-/**
- * Configura o body-parser para processar dados dos formulários e JSON
- * Essencial para receber dados POST do cliente
- */
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-/**
- * Configura o diretório 'public' para servir arquivos estáticos
- * Contém CSS, JavaScript, imagens, etc.
- */
 app.use(express.static(path.join(__dirname, 'public')));
 
-// =========================================================
-// ARMAZENAMENTO DE DADOS (em memória - substituir por BD)
-// =========================================================
+let usuarios = [];
+let grupos = [];
+let registros = [];
+let produtos = [];
+let notificacoes = [];
 
-/**
- * Armazenamento temporário para dados 
- * NOTA: Em uma aplicação real, estes dados seriam armazenados em um banco de dados
- * Você pode substituir estas arrays por chamadas ao seu banco de dados quando implementar o back-end
- */
-let usuarios = []; // Usuários cadastrados
-let grupos = [];    // Grupos criados
-let registros = [];  // Registros de reservas
-let produtos = [];   // Produtos disponíveis
-let notificacoes = []; // Notificações do sistema
-
-/**
- * Usuário padrão para teste inicial
- * REMOVER em produção após implementar banco de dados
- */
 usuarios.push({
     id: '12345',
     nome: 'User',
@@ -195,10 +115,6 @@ usuarios.push({
     photo: '/images/default-profile.svg'
 });
 
-/**
- * Notificação inicial para mostrar o sistema funcionando
- * REMOVER em produção após implementar banco de dados
- */
 notificacoes.push({
     id: Date.now().toString(),
     tipo: 'info',
@@ -208,14 +124,8 @@ notificacoes.push({
     data: new Date()
 });
 
-/**
- * Variável para simular uma sessão de usuário
- * NOTA: Em produção, usar um sistema adequado de gerenciamento de sessão
- * como express-session, connect-mongo, etc.
- */
 let usuarioAtual = null;
 
-// Grupos de exemplo para teste
 grupos.push({
     id: '1',
     name: 'Casa',
@@ -237,35 +147,18 @@ grupos.push({
     createdAt: new Date()
 });
 
-// =========================================================
-// ROTAS DE AUTENTICAÇÃO
-// =========================================================
-
-/**
- * Rota: GET /login
- * Descrição: Exibe a página de login
- */
 app.get('/login', (req, res) => {
     res.render('login');
 });
 
-/**
- * Rota: POST /login
- * Descrição: Processa o login do usuário
- * Parâmetros:
- * - email: Email ou nome de usuário
- * - senha: Senha do usuário
- */
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
     
     try {
-        // Buscar usuário no banco
         const result = await db.query('SELECT * FROM usuario WHERE email = $1 AND senha = $2', [email, senha]);
         
         if (result.rows.length > 0) {
             usuarioAtual = result.rows[0];
-            // Atualizar último login
             await db.query('UPDATE usuario SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1', [usuarioAtual.id]);
             res.redirect('/');
         } else {
@@ -277,23 +170,10 @@ app.post('/login', async (req, res) => {
     }
 });
 
-/**
- * Rota: GET /registro
- * Descrição: Exibe a página de registro de novo usuário
- */
 app.get('/registro', (req, res) => {
     res.render('registro');
 });
 
-/**
- * Rota: POST /registro
- * Descrição: Processa o registro de um novo usuário
- * Parâmetros:
- * - nome: Nome completo do usuário
- * - email: Email do usuário
- * - senha: Senha escolhida
- * - confirmar_senha: Confirmação da senha
- */
 app.post('/registro', async (req, res) => {
     const { nome, email, senha, confirmar_senha } = req.body;
 
@@ -306,7 +186,6 @@ app.post('/registro', async (req, res) => {
     }
 
     try {
-        // Verificar se o email já está em uso no banco
         const emailCheck = await db.query('SELECT id FROM usuario WHERE email = $1', [email]);
         if (emailCheck.rows.length > 0) {
             return res.render('registro', {
@@ -315,7 +194,6 @@ app.post('/registro', async (req, res) => {
             });
         }
 
-        // Inserir novo usuário (usando nomes corretos dos campos)
         const result = await db.query(
             'INSERT INTO usuario (nome, email, senha, apelido, telefone, foto, data_criacao) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) RETURNING *',
             [nome, email, senha, '', '', '/images/default-profile.svg']
@@ -345,13 +223,7 @@ app.post('/registro', async (req, res) => {
     }
 });
 
-/**
- * Rota: GET /completar-perfil
- * Descrição: Exibe a página para completar o perfil após o registro
- * Acesso: Apenas usuários recém-registrados
- */
 app.get('/completar-perfil', (req, res) => {
-    // Se não há usuário logado ou não é um registro novo, redirecionar para login
     if (!usuarioAtual || !usuarioAtual.registroCriado) {
         return res.redirect('/login');
     }
@@ -359,16 +231,7 @@ app.get('/completar-perfil', (req, res) => {
     res.render('completar-perfil');
 });
 
-/**
- * Rota: POST /completar-perfil
- * Descrição: Processa as informações adicionais do perfil
- * Parâmetros:
- * - profile-photo: Foto de perfil (arquivo)
- * - apelido: Apelido opcional
- * - telefone: Telefone opcional
- */
 app.post('/completar-perfil', uploadPerfil.single('profile-photo'), async (req, res) => {
-    // Se não há usuário logado, redirecionar para login
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
@@ -377,69 +240,51 @@ app.post('/completar-perfil', uploadPerfil.single('profile-photo'), async (req, 
         const { apelido, telefone } = req.body;
         let photoPath = usuarioAtual.photo;
         
-        // Se uma foto foi enviada, atualizar o caminho
         if (req.file) {
             photoPath = `/images/perfil/${req.file.filename}`;
         }
         
-        // Atualizar informações no banco de dados
         await db.query(
             'UPDATE usuario SET apelido = $1, telefone = $2, foto = $3 WHERE id = $4',
             [apelido || '', telefone || '', photoPath, usuarioAtual.id]
         );
         
-        // Atualizar informações do usuário em memória
         usuarioAtual.apelido = apelido || '';
         usuarioAtual.telefone = telefone || '';
         usuarioAtual.photo = photoPath;
         
-        // Remover flag de registro recém-criado
         usuarioAtual.registroCriado = false;
         
-        // Redirecionar para a página inicial
         res.redirect('/');
     } catch (error) {
-        console.error('Erro ao completar perfil:', error);
-        res.status(500).send('Erro ao completar perfil');
+        console.error('Erro ao atualizar perfil:', error);
+        res.render('completar-perfil', { error: 'Erro ao atualizar perfil' });
     }
 });
 
-/**
- * Rota: GET /logout
- * Descrição: Encerra a sessão do usuário
- */
 app.get('/logout', (req, res) => {
-    // Limpar usuário atual
-    // NOTA: Em produção, destruir sessão adequadamente
     usuarioAtual = null;
     
-    // Redirecionar para login
     res.redirect('/login');
 });
 
-// =========================================================
-// ROTAS PRINCIPAIS DA APLICAÇÃO
-// =========================================================
-
-/**
- * Rota: GET /
- * Descrição: Página inicial da aplicação
- * Acesso: Apenas usuários autenticados
- */
 app.get('/', async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
 
     try {
-        // Buscar grupos do usuário (tanto os que ele criou quanto os que participa)
         const gruposResult = await db.query(`
-            SELECT g.* FROM grupo g
+            SELECT g.id, g.nome as name, g.descricao, g.imagem, g.criador_id, g.data_criacao FROM grupo g
             LEFT JOIN membro_grupo mg ON g.id = mg.grupo_id
             WHERE g.criador_id = $1 OR mg.usuario_id = $1
         `, [usuarioAtual.id]);
 
-        // Buscar notificações não lidas
+        const gruposFormatados = gruposResult.rows.map(group => ({
+            ...group,
+            imagem: group.imagem || '/images/default-group.svg'
+        }));
+
         const notificacoesResult = await db.query(`
             SELECT * FROM notificacao 
             WHERE usuario_id = $1 AND lida = false
@@ -448,10 +293,9 @@ app.get('/', async (req, res) => {
 
         const user = {
             name: usuarioAtual.nome,
-            groups: gruposResult.rows,
+            groups: gruposFormatados,
             notificacoes: notificacoesResult.rows
         };
-        
         res.render('index', { user });
     } catch (error) {
         console.error('Erro ao carregar página inicial:', error);
@@ -459,35 +303,22 @@ app.get('/', async (req, res) => {
     }
 });
 
-/**
- * Rota: GET /produtos
- * Descrição: Página de produtos disponíveis para reserva
- * Acesso: Apenas usuários autenticados
- */
 app.get('/produtos', (req, res) => {
-    // Se não há usuário logado, redirecionar para login
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
     
-    // Renderiza a página de produtos
     res.render('produtos', { 
         grupos: grupos,
         produtos: produtos
     });
 });
 
-/**
- * Rota: GET /perfil
- * Descrição: Página de perfil do usuário
- * Acesso: Apenas usuários autenticados
- */
 app.get('/perfil', async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
 
-    // Buscar grupos do usuário (tanto os que ele criou quanto os que participa)
     const gruposResult = await db.query(`
         SELECT g.* FROM grupo g
         LEFT JOIN membro_grupo mg ON g.id = mg.grupo_id
@@ -507,44 +338,22 @@ app.get('/perfil', async (req, res) => {
     res.render('perfil', { user, grupos: gruposResult.rows });
 });
 
-/**
- * Rota: GET /notificacoes
- * Descrição: Página de notificações do usuário
- * Acesso: Apenas usuários autenticados
- */
 app.get('/notificacoes', (req, res) => {
-    // Se não há usuário logado, redirecionar para login
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
     
-    // Renderiza a página de notificações
     res.render('notificacoes', { notificacoes });
 });
 
-/**
- * Rota: GET /criar-grupo
- * Descrição: Página para criar um novo grupo
- * Acesso: Apenas usuários autenticados
- */
 app.get('/criar-grupo', (req, res) => {
-    // Se não há usuário logado, redirecionar para login
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
     
-    // Renderiza a página de criação de grupo
     res.render('criar-grupo');
 });
 
-/**
- * Rota: POST /criar-grupo
- * Descrição: Processa a criação de um novo grupo
- * Parâmetros:
- * - nome: Nome do grupo
- * - descricao: Descrição do grupo
- * - groupPhoto: Foto do grupo (arquivo)
- */
 app.post('/criar-grupo', upload.single('groupPhoto'), async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
@@ -558,19 +367,16 @@ app.post('/criar-grupo', upload.single('groupPhoto'), async (req, res) => {
             photoPath = `/images/grupos/${req.file.filename}`;
         }
 
-        // Inserir novo grupo
         const grupoResult = await db.query(
             'INSERT INTO grupo (nome, descricao, imagem, criador_id) VALUES ($1, $2, $3, $4) RETURNING id',
             [nome, descricao || '', photoPath, usuarioAtual.id]
         );
 
-        // Adicionar criador como membro do grupo
         await db.query(
             'INSERT INTO membro_grupo (usuario_id, grupo_id) VALUES ($1, $2)',
             [usuarioAtual.id, grupoResult.rows[0].id]
         );
 
-        // Criar notificação
         await db.query(
             'INSERT INTO notificacao (usuario_id, tipo, titulo, mensagem) VALUES ($1, $2, $3, $4)',
             [usuarioAtual.id, 'grupo', 'Novo Grupo Criado', `Você criou o grupo "${nome}"`]
@@ -583,17 +389,12 @@ app.post('/criar-grupo', upload.single('groupPhoto'), async (req, res) => {
     }
 });
 
-/**
- * Rota: GET /grupos
- * Descrição: Página de grupos disponíveis
- */
 app.get('/grupos', async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
 
     try {
-        // Buscar grupos do usuário
         const gruposResult = await db.query(`
             SELECT g.* FROM grupo g
             LEFT JOIN membro_grupo mg ON g.id = mg.grupo_id
@@ -609,16 +410,6 @@ app.get('/grupos', async (req, res) => {
     }
 });
 
-// =========================================================
-// API ENDPOINTS
-// =========================================================
-
-/**
- * Endpoint: GET /api/produtos/grupo/:id
- * Descrição: Retorna produtos de um grupo específico
- * Parâmetros:
- * - id: ID do grupo (URL params)
- */
 app.get('/api/produtos/grupo/:id', async (req, res) => {
     if (!usuarioAtual) {
         return res.status(401).json({ erro: 'Não autorizado' });
@@ -627,7 +418,6 @@ app.get('/api/produtos/grupo/:id', async (req, res) => {
     try {
         const grupoId = req.params.id;
 
-        // Verificar se o usuário é membro do grupo
         const membroResult = await db.query(`
             SELECT 1 FROM membro_grupo 
             WHERE usuario_id = $1 AND grupo_id = $2
@@ -637,7 +427,6 @@ app.get('/api/produtos/grupo/:id', async (req, res) => {
             return res.status(403).json({ erro: 'Você não é membro deste grupo' });
         }
 
-        // Buscar produtos do grupo
         const produtosResult = await db.query(
             'SELECT * FROM produto WHERE grupo_id = $1',
             [grupoId]
@@ -650,14 +439,6 @@ app.get('/api/produtos/grupo/:id', async (req, res) => {
     }
 });
 
-/**
- * Endpoint: POST /api/produtos
- * Descrição: Adiciona um novo produto
- * Parâmetros:
- * - nome: Nome do produto
- * - descricao: Descrição do produto
- * - groupId: ID do grupo ao qual o produto pertence
- */
 app.post('/api/produtos', async (req, res) => {
     if (!usuarioAtual) {
         return res.status(401).json({ erro: 'Não autorizado' });
@@ -670,7 +451,6 @@ app.post('/api/produtos', async (req, res) => {
             return res.status(400).json({ erro: 'Nome e grupo são obrigatórios' });
         }
 
-        // Verificar se o usuário é membro do grupo
         const membroResult = await db.query(`
             SELECT 1 FROM membro_grupo 
             WHERE usuario_id = $1 AND grupo_id = $2
@@ -680,7 +460,6 @@ app.post('/api/produtos', async (req, res) => {
             return res.status(403).json({ erro: 'Você não é membro deste grupo' });
         }
 
-        // Inserir produto
         const produtoResult = await db.query(
             'INSERT INTO produto (nome, descricao, grupo_id, criador_id) VALUES ($1, $2, $3, $4) RETURNING *',
             [nome, descricao || '', groupId, usuarioAtual.id]
@@ -693,12 +472,6 @@ app.post('/api/produtos', async (req, res) => {
     }
 });
 
-/**
- * Endpoint: POST /api/notificacoes/:id/lida
- * Descrição: Marca uma notificação como lida
- * Parâmetros:
- * - id: ID da notificação (URL params)
- */
 app.post('/api/notificacoes/:id/lida', async (req, res) => {
     if (!usuarioAtual) {
         return res.status(401).json({ erro: 'Não autorizado' });
@@ -717,12 +490,6 @@ app.post('/api/notificacoes/:id/lida', async (req, res) => {
     }
 });
 
-/**
- * Endpoint: DELETE /api/notificacoes/:id
- * Descrição: Remove uma notificação
- * Parâmetros:
- * - id: ID da notificação (URL params)
- */
 app.delete('/api/notificacoes/:id', (req, res) => {
     const notificacaoId = req.params.id;
     const index = notificacoes.findIndex(n => n.id === notificacaoId);
@@ -735,19 +502,11 @@ app.delete('/api/notificacoes/:id', (req, res) => {
     }
 });
 
-/**
- * Endpoint: DELETE /api/notificacoes
- * Descrição: Remove todas as notificações
- */
 app.delete('/api/notificacoes', (req, res) => {
     notificacoes = [];
     res.json({ sucesso: true });
 });
 
-/**
- * Endpoint: GET /api/notificacoes/nao-lidas
- * Descrição: Retorna quantidade de notificações não lidas
- */
 app.get('/api/notificacoes/nao-lidas', (req, res) => {
     const naoLidas = notificacoes.filter(n => !n.lida);
     res.json({ 
@@ -756,14 +515,6 @@ app.get('/api/notificacoes/nao-lidas', (req, res) => {
     });
 });
 
-/**
- * Endpoint: POST /api/convites/grupo
- * Descrição: Cria um convite para um grupo
- * Parâmetros:
- * - grupoId: ID do grupo
- * - grupoNome: Nome do grupo
- * - remetente: Nome do remetente (opcional)
- */
 app.post('/api/convites/grupo', (req, res) => {
     const { grupoId, grupoNome, remetente } = req.body;
     
@@ -771,10 +522,8 @@ app.post('/api/convites/grupo', (req, res) => {
         return res.status(400).json({ erro: 'Dados do grupo são obrigatórios' });
     }
     
-    // Obter nome do remetente
     const nomeRemetente = usuarioAtual ? usuarioAtual.nome : (remetente || 'um usuário');
     
-    // Criar notificação de convite
     const convite = {
         id: Date.now().toString(),
         tipo: 'convite',
@@ -791,12 +540,6 @@ app.post('/api/convites/grupo', (req, res) => {
     res.status(201).json(convite);
 });
 
-/**
- * Endpoint: POST /api/convites/:id/aceitar
- * Descrição: Aceita um convite para grupo
- * Parâmetros:
- * - id: ID do convite (URL params)
- */
 app.post('/api/convites/:id/aceitar', (req, res) => {
     const conviteId = req.params.id;
     const convite = notificacoes.find(n => n.id === conviteId && n.tipo === 'convite');
@@ -805,19 +548,14 @@ app.post('/api/convites/:id/aceitar', (req, res) => {
         return res.status(404).json({ erro: 'Convite não encontrado' });
     }
     
-    // Procurar o grupo
     const grupo = grupos.find(g => g.id === convite.grupoId);
     
     if (!grupo) {
         return res.status(404).json({ erro: 'Grupo não encontrado' });
     }
     
-    // Marcar notificação como lida
     convite.lida = true;
     
-    // NOTA: Em produção, adicionar usuário ao grupo no banco de dados
-    
-    // Criar notificação de confirmação
     const confirmacao = {
         id: Date.now().toString(),
         tipo: 'confirmacao',
@@ -835,21 +573,13 @@ app.post('/api/convites/:id/aceitar', (req, res) => {
     });
 });
 
-/**
- * Endpoint: GET /api/demo/adicionar-convite
- * Descrição: Rota de demonstração para adicionar convite
- * NOTA: Remover em produção
- */
 app.get('/api/demo/adicionar-convite', (req, res) => {
-    // Verificar se existem grupos para convidar
     if (grupos.length === 0) {
         return res.status(400).json({ erro: 'Não há grupos disponíveis para enviar convites' });
     }
     
-    // Selecionar um grupo aleatório
     const grupo = grupos[Math.floor(Math.random() * grupos.length)];
     
-    // Criar notificação de convite
     const convite = {
         id: Date.now().toString(),
         tipo: 'convite',
@@ -870,7 +600,6 @@ app.get('/api/demo/adicionar-convite', (req, res) => {
     });
 });
 
-// Rota para exibir a página de criar produto
 app.get('/criar-produto', (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
@@ -884,7 +613,6 @@ app.get('/criar-produto', (req, res) => {
     res.render('criar-produto', { grupoId, dados: null, erro: null });
 });
 
-// Rota para processar a criação de produto
 app.post('/criar-produto', uploadProduto.single('productPhoto'), async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
@@ -910,7 +638,6 @@ app.post('/criar-produto', uploadProduto.single('productPhoto'), async (req, res
     }
 });
 
-// Rota para obter produtos de um grupo
 app.get('/api/produtos/:grupoId', async (req, res) => {
     if (!usuarioAtual) {
         return res.status(401).json({ erro: 'Não autorizado' });
@@ -931,7 +658,6 @@ app.get('/api/produtos/:grupoId', async (req, res) => {
             ORDER BY p.nome
         `, [grupoId]);
         
-        // Ajustar para retornar quantidade_disponivel no lugar de quantidade
         const produtos = result.rows.map(produto => ({
             ...produto,
             quantidade: produto.quantidade_disponivel
@@ -944,14 +670,12 @@ app.get('/api/produtos/:grupoId', async (req, res) => {
     }
 });
 
-// Rota para exibir a tela de reserva de um produto
 app.get('/reserva/:produtoId', async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
     }
     const produtoId = req.params.produtoId;
     try {
-        // Buscar o produto no banco de dados
         const result = await db.query('SELECT * FROM produto WHERE id = $1', [produtoId]);
         if (result.rows.length === 0) {
             return res.status(404).render('reserva', { produto: null });
@@ -964,7 +688,6 @@ app.get('/reserva/:produtoId', async (req, res) => {
     }
 });
 
-// Rota para processar o formulário de reserva
 app.post('/reservar', async (req, res) => {
     if (!usuarioAtual) {
         return res.redirect('/login');
@@ -975,19 +698,15 @@ app.post('/reservar', async (req, res) => {
         return res.status(400).send('Dados incompletos');
     }
     try {
-        // Buscar o produto para saber a quantidade
         const produtoResult = await db.query('SELECT * FROM produto WHERE id = $1', [produto_id]);
         if (produtoResult.rows.length === 0) {
             return res.status(404).send('Produto não encontrado');
         }
         const produto = produtoResult.rows[0];
-        // Chamar a função do banco para criar a reserva (verifica disponibilidade de unidade)
         await db.query(
             `SELECT criar_reserva($1, $2, $3, $4, 1)`,
             [produto_id, usuario_id, data_inicio, data_fim]
         );
-        // Opcional: adicionar observações na reserva (se necessário, pode ser ajustado no banco)
-        // Redirecionar para a tela de grupos ou mostrar mensagem de sucesso
         res.redirect('/grupos');
     } catch (err) {
         let msg = 'Erro ao criar reserva';
@@ -998,7 +717,6 @@ app.post('/reservar', async (req, res) => {
     }
 });
 
-// Endpoint para listar reservas ativas do usuário logado
 app.get('/api/minhas-reservas', async (req, res) => {
     if (!usuarioAtual) {
         return res.status(401).json({ erro: 'Não autorizado' });
@@ -1018,14 +736,12 @@ app.get('/api/minhas-reservas', async (req, res) => {
     }
 });
 
-// Endpoint para devolver/finalizar reserva
 app.post('/api/devolver-reserva/:id', async (req, res) => {
     if (!usuarioAtual) {
         return res.status(401).json({ erro: 'Não autorizado' });
     }
     const reservaId = req.params.id;
     try {
-        // Atualiza status da reserva para concluída
         await db.query(
             `UPDATE reserva SET status = 'concluida' WHERE id = $1 AND usuario_id = $2`,
             [reservaId, usuarioAtual.id]
@@ -1037,11 +753,6 @@ app.post('/api/devolver-reserva/:id', async (req, res) => {
     }
 });
 
-// =========================================================
-// INICIANDO O SERVIDOR
-// =========================================================
-
-// Inicia o servidor na porta definida
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 }); 

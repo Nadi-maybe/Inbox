@@ -1,11 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reservar Produto</title>
-  <link rel="stylesheet" href="/styles.css"><!-- Ajuste se necessário -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <%- include('partials/head', {title: 'Reservar Produto'}) %>
   <style>
     .modal {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -50,13 +46,14 @@
       flex-direction: column;
       gap: 4px;
     }
+    .header {
+        background-color: #0047CC !important;
+    }
   </style>
 </head>
 <body style="background:#f5f6fa;">
-  <header style="background:#0057d8; color:#fff; padding:24px 0; text-align:center;">
-    <img src="/images/logo-inbox.png" alt="Inbox" style="height:40px;">
-    <h2 style="margin:0;">Reservar Produto</h2>
-  </header>
+  <%- include('partials/header') %>
+  <h2 style="text-align:center; margin: 16px 0;">Reservar Produto</h2>
   <main style="max-width:600px; margin:32px auto;">
     <% if (produto) { %>
       <div class="produto-card">

@@ -1,68 +1,67 @@
-// grupos.js - Funcionalidades específicas da página de grupos
 
 document.addEventListener('DOMContentLoaded', () => {
     initGrupos();
 });
 
-// Inicializar página de grupos
+
 function initGrupos() {
-    // Adicionar eventos de clique aos grupos
+    
     const groupItems = document.querySelectorAll('.group-item');
     groupItems.forEach(item => {
         item.addEventListener('click', () => {
-            // Remover classe active de todos os grupos
+            
             groupItems.forEach(g => g.classList.remove('active'));
-            // Adicionar classe active ao grupo clicado
+            
             item.classList.add('active');
             
             const grupoId = item.dataset.id;
             const grupoNome = item.querySelector('.group-name').textContent;
             
-            // Exibir o nome do grupo na seção de produtos
+            
             document.getElementById('grupo-nome').textContent = grupoNome;
             
-            // Carregar produtos do grupo selecionado
+            
             loadProdutos(grupoId);
             
-            // Exibir seção de produtos e botão voltar
+            
             document.getElementById('produtos-container').style.display = 'block';
             document.getElementById('back-button').style.display = 'block';
         });
     });
     
-    // Adicionar evento ao botão voltar
+    
     document.getElementById('back-button').addEventListener('click', () => {
-        // Remover classe active de todos os grupos
+        
         groupItems.forEach(g => g.classList.remove('active'));
         
-        // Esconder seção de produtos e botão voltar
+        
         document.getElementById('produtos-container').style.display = 'none';
         document.getElementById('back-button').style.display = 'none';
     });
     
-    // Inicializar busca
+    
     initSearch();
 }
 
-// Inicializar busca
+
 function initSearch() {
     const searchInput = document.getElementById('search-input');
     
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         
-        // Verificar se estamos na visualização de produtos
+        
         if (document.getElementById('produtos-container').style.display === 'block') {
-            // Filtrar produtos
+            
             filterProdutos(searchTerm);
         } else {
-            // Filtrar grupos
+            
             filterGrupos(searchTerm);
         }
     });
 }
 
-// Filtrar grupos com base no termo de busca
+
 function filterGrupos(searchTerm) {
     const groupItems = document.querySelectorAll('.group-item');
     let hasVisibleGroups = false;
@@ -77,7 +76,7 @@ function filterGrupos(searchTerm) {
         }
     });
     
-    // Mostrar ou esconder mensagem de "nenhum grupo encontrado"
+    
     const emptyState = document.querySelector('.empty-state');
     if (!hasVisibleGroups) {
         emptyState.style.display = 'flex';
@@ -92,7 +91,7 @@ function filterGrupos(searchTerm) {
     }
 }
 
-// Carregar produtos do grupo selecionado
+
 function loadProdutos(grupoId) {
     const produtosList = document.getElementById('produtos-list');
     produtosList.innerHTML = `
@@ -102,19 +101,19 @@ function loadProdutos(grupoId) {
         </div>
     `;
     
-    // Esconder mensagem de "nenhum produto"
+    
     document.getElementById('no-produtos').style.display = 'none';
     
-    // Buscar produtos do grupo
+    
     fetch(`/api/produtos/grupo/${grupoId}`)
         .then(response => response.json())
         .then(produtos => {
-            // Limpar lista de produtos
+            
             produtosList.innerHTML = '';
             
-            // Verificar se há produtos
+            
             if (produtos.length > 0) {
-                // Criar cards para cada produto
+                
                 produtos.forEach(produto => {
                     const produtoCard = document.createElement('div');
                     produtoCard.className = 'produto-card';
@@ -131,7 +130,7 @@ function loadProdutos(grupoId) {
                     produtosList.appendChild(produtoCard);
                 });
             } else {
-                // Mostrar mensagem de "nenhum produto"
+                
                 document.getElementById('no-produtos').style.display = 'flex';
             }
         })
@@ -146,7 +145,7 @@ function loadProdutos(grupoId) {
         });
 }
 
-// Filtrar produtos com base no termo de busca
+
 function filterProdutos(searchTerm) {
     const produtoCards = document.querySelectorAll('.produto-card');
     let hasVisibleProdutos = false;
@@ -167,7 +166,7 @@ function filterProdutos(searchTerm) {
     const produtosList = document.getElementById('produtos-list');
     
     if (!hasVisibleProdutos) {
-        // Não há produtos no grupo
+        
         noProdutos.style.display = 'flex';
         noProdutos.innerHTML = `
             <div class="empty-icon">
@@ -176,7 +175,7 @@ function filterProdutos(searchTerm) {
             <p>Nenhum produto encontrado</p>
         `;
     } else {
-        // Há produtos visíveis
+        
         noProdutos.style.display = 'none';
     }
 } 
