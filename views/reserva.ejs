@@ -5,7 +5,7 @@
   <style>
     .modal {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000;
+      background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 9999;
     }
     .modal-content {
       background: #fff; border-radius: 20px; padding: 32px; min-width: 320px;
@@ -78,7 +78,7 @@
   </main>
 
   <!-- Modal de Reserva -->
-  <div id="modalReserva" class="modal" style="display:none;">
+  <div id="modalReserva" class="modal">
     <div class="modal-content">
       <h2 style="color:#0057d8;">Reservar Produto</h2>
       <form id="formReserva" method="POST" action="/reservar">
@@ -99,11 +99,14 @@
 
   <script>
     function abrirModalReserva(produtoId) {
-      document.getElementById('modalReserva').style.display = 'flex';
+      console.log('abrirModalReserva called with produtoId:', produtoId);
+      const modal = document.getElementById('modalReserva');
+      modal.classList.add('show');
       document.getElementById('produto_id').value = produtoId;
     }
     function fecharModalReserva() {
-      document.getElementById('modalReserva').style.display = 'none';
+      const modal = document.getElementById('modalReserva');
+      modal.classList.remove('show');
     }
     // Fecha modal ao clicar fora do conteúdo
     document.getElementById('modalReserva').addEventListener('click', function(e) {
